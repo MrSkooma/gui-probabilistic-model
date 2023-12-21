@@ -1,100 +1,116 @@
-import dash_bootstrap_components as dbc
-import dash
-
-from dash import dcc, html, Input, Output, State, ctx, ALL, callback
-import components as c
 from typing import List
+
 from probabilistic_model import probabilistic_model as pm
 import random_events.variables
+import dash_bootstrap_components as dbc
+import dash
+from dash import dcc, html, Input, Output, State, ctx, ALL, callback
+import dash_daq as daq
+import components as c
 
-global result
+"""
+    Most Probable Explanation GUI here can be chosen which Variabel to be consider (Default are all)
+    Left kan chosen what be Given Information in the Moment. 
+    After the Equals Button the Values will be Displayed, that can be change if Multi Results are exsisting. 
+"""
+
+global mode
+
 global page
 page = 0
+
+global likelihood
+likelihood = 0.0
 
 global modal_var_index
 modal_var_index = -1
 
-global modal_basic_pos
-modal_basic_pos = c.gen_modal_basic_id("_pos")
+global modal_basic_mpe
+modal_basic_mpe = c.gen_modal_basic_id("_mpe")
 
-modal_option_pos = c.gen_modal_option_id("_pos")
+modal_option_mpe = c.gen_modal_option_id("_mpe")
 
 dash.register_page(__name__)
 
 
-def layout_pos():
+def layout_mpe():
+    """
+        Generad the Default style for the MPE Gui
+    :return:  Dash HTML Construkt
+    """
     return dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(html.H1("Posterior", className='text-center mb-4'), width=12),
+                    dbc.Col(html.H1("Most Probable Explanation", className='text-center mb-4'), width=12),
                 ]
             ),
             dbc.Row(
                 [
                     dbc.Col([
+                        html.Div("argmax ", className="pe-3",
+                                 style={'fontSize': 20, 'padding-top': 0}),
                         html.Div("P ", className="ps-3",
                                  style={'fontSize': 30, 'padding-top': 0}),
-                    ], id="text_l_pos", align="center",
-                        className="d-flex flex-wrap align-items-center justify-content-end pe-3", width=2),
-                    dbc.Col(id="q_variable_pos",
+                    ], id="text_l_mpe", align="center",
+                        className="d-flex flex-wrap align-items-center justify-content-end pe-3", width=2), #d-flex flex-wrap align-items-center justify-content-end pe-3
+                    dbc.Col(id="q_variable_mpe",
                             children=[
-                                dcc.Dropdown(id="text_var_pos", options=sorted(c.vardict.keys()),
+                                dcc.Dropdown(id="text_var_mpe", options=sorted(c.vardict.keys()),
                                              value=sorted(c.vardict.keys()),
-                                             multi=True, disabled=False)],
-                            width=4, className="row row-cols-1 g-1 gy-2 align-items-center border-start border-3 rounded-4 border-secondary"),
-                    dbc.Col(id="e_variable_pos",
-                            children=[dcc.Dropdown(id={'type': 'dd_e_pos', 'index': 0},
+                                             multi=True, disabled=True)],
+                            width=4, className="row row-cols-1 g-1 gy-2 align-items-center border-start border-3 rounded-4 border-secondary"), #d-grid gap-3
+                    dbc.Col(id="e_variable_mpe",
+                            children=[dcc.Dropdown(id={'type': 'dd_e_mpe', 'index': 0},
                                                    options=sorted(c.vardict.keys()))],
-                            width=2, className="row row-cols-1 g-1 gy-2 align-items-center border-start border-3 border-secondary"),
-                    dbc.Col(id="e_input_pos",
-                            children=[dcc.Dropdown(id={'type': 'i_e_pos', 'index': 0}, disabled=True)], width=3,
+                            width=2, className="row row-cols-1 g-1 gy-2 align-items-center border-start border-3 border-secondary"), #d-grid gap-3 ps-3
+                    dbc.Col(id="e_input_mpe",
+                            children=[dcc.Dropdown(id={'type': 'i_e_mpe', 'index': 0}, disabled=True)], width=3,
                             className="row row-cols-1 g-1 gy-2 align-items-center"),
-                    dbc.Col(id="e_option_pos", children=[
-                        dbc.Button("👁️", id=dict(type='b_e_pos', index=0), disabled=True, n_clicks=0,
+                    dbc.Col(id="e_option_mpe", children=[
+                        dbc.Button("👁️", id=dict(type='b_e_mpe', index=0), disabled=True, n_clicks=0,
                                    className="",
-                                   size="sm")],className=" row row-cols-1 g-1 gy-2 align-items-center pe-3 ps-1 border-end border-secondary border-3 rounded-4")
-                ], className="justify-content-md-center"
+                                   size="sm")], width=1, className="row row-cols-1 g-1 gy-2 align-items-center pe-3 ps-1 border-end border-secondary border-3 rounded-4"), #d-grid border-end border-secondary border-3 rounded-4#d-grid gx-1 d-md-flex align-self-center
+                ], className="row row-cols-6 g-1 gy-2 mb-3" #justify-content-md-center
             ),
-            dbc.Row(dbc.Button("=", id="erg_b_pos", className="d-grid gap-2 col-3 mt-3 mx-auto", n_clicks=0)),
-            dbc.Row(dbc.Col(html.H2("", className='text-center mb-4', id="head_erg_pos"), className="pt-3", width=12)),
+            dbc.Row(dbc.Button("=", id="erg_b_mpe", className="d-grid gap-2 col-6 mx-auto", n_clicks=0)), #d-grid gap-2 col-3 mt-3 mx-auto
             dbc.Row(
                 [
-                    dbc.Col(dbc.Button("<", id="b_erg_pre_pos", n_clicks=0, disabled=True),
+                    dbc.Col(dbc.Button("<", id="b_erg_pre_mpe", n_clicks=0, disabled=True),
                             className="d-flex justify-content-end align-self-stretch"),
-                    dbc.Col(children=[], id="pos_erg_pos", className="", width=8),
-                    dbc.Col(dbc.Button(">", id="b_erg_next_pos", n_clicks=0, disabled=True),
+                    dbc.Col(children=[], id="mpe_erg", className=""),
+                    dbc.Col(dbc.Button(">", id="b_erg_next_mpe", n_clicks=0, disabled=True),
                             className="d-flex justify-content-start align-self-stretch")
                 ], className="pt-3", align="center"),
             dbc.Row(),
-            modal_option_pos
+            modal_option_mpe
         ], fluid=True
     )
 
 
-layout = layout_pos
+layout = layout_mpe
 
 
 @callback(
-    Output('e_variable_pos', 'children'),
-    Output('e_input_pos', 'children'),
-    Output('e_option_pos', 'children'),
-    Output('text_l_pos', 'children'),
-    Output('q_variable_pos', 'children'),
-    Output('modal_option_pos', 'children'),
-    Output('modal_option_pos', 'is_open'),
-    Input({'type': 'dd_e_pos', 'index': ALL}, 'value'),
-    Input({'type': 'b_e_pos', 'index': ALL}, 'n_clicks'),
-    Input({'type': 'option_save_pos', 'index': ALL}, 'n_clicks'),
-    State('e_variable_pos', 'children'),
-    State('e_input_pos', 'children'),
-    State('q_variable_pos', 'children'),
-    State('e_option_pos', 'children'),
-    State({'type': 'op_i_pos', 'index': ALL}, 'value'),
+    Output('e_variable_mpe', 'children'),
+    Output('e_input_mpe', 'children'),
+    Output('e_option_mpe', 'children'),
+    Output('text_l_mpe', 'children'),
+    Output('q_variable_mpe', 'children'),
+    Output('modal_option_mpe', 'children'),
+    Output('modal_option_mpe', 'is_open'),
+    Input({'type': 'dd_e_mpe', 'index': ALL}, 'value'),
+    Input({'type': 'b_e_mpe', 'index': ALL}, 'n_clicks'),
+    Input({'type': 'option_save_mpe', 'index': ALL}, 'n_clicks'),
+    State('e_variable_mpe', 'children'),
+    State('e_input_mpe', 'children'),
+    State('q_variable_mpe', 'children'),
+    State('e_option_mpe', 'children'),
+    State({'type': 'op_i_mpe', 'index': ALL}, 'value'),
 )
-def post_router(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
+def evid_gen(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
     """
-        Receives callback events and manages these to the correct
+        Receives appCallback events and manages these to the correct
     :param dd_vals: All Varietals used in Evidence Section are chosen
     :param b_e: Trigger if the Zoom Button in the Evidence is Pressed
     :param op_s: Trigger if the Modal parameter from a Zoom should be saved
@@ -103,28 +119,29 @@ def post_router(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
     :param q_var: the Dropdown of variable of Query Section
     :param e_op: Information of whiche Zoom Button was pressed in the Evidence section
     :param op_i: The Values choosen in the Zoom Modal
-    :return: returns evidence variable, evidence Input, text prefix, query Variable
+    :return: Updatet Varibel List and the Input.
     """
+
     cb = ctx.triggered_id if not None else None
     if cb is None:
-        return e_var, e_in, e_op, c.create_prefix_text_query(len(e_var), len(e_var)), q_var, modal_basic_pos, False
-    elif cb.get("type") == "dd_e_pos":
+        return e_var, e_in, e_op, c.create_prefix_text_mpe(len(e_var)), q_var, modal_basic_mpe, False
+    elif cb.get("type") == "dd_e_mpe":
         if dd_vals[cb.get("index")] is None:
             return *c.del_selector_from_div_button(c.in_use_model, e_var, e_in, e_op, cb.get("index")), \
-                c.create_prefix_text_query(len(e_var), len(e_var)), q_var, modal_basic_pos, False
+                c.create_prefix_text_mpe(4), q_var, modal_basic_mpe, False
 
         variable = c.vardict[dd_vals[cb.get("index")]]
         if isinstance(variable, random_events.variables.Continuous):
-
             minimum = c.prior[variable].domain[variable].lower
             maximum = c.prior[variable].domain[variable].upper
             e_in[cb.get("index")] = c.create_range_slider(minimum, maximum,
-                                                          id={'type': 'i_e_pos', 'index': cb.get("index")},
-                                                          dots=False,
+                                                          id={'type': 'i_e_mpe', 'index': cb.get("index")}
+                                                          , dots=False,
                                                           tooltip={"placement": "bottom", "always_visible": False})
 
+
         elif isinstance(variable, random_events.variables.Symbolic):
-            e_in[cb.get("index")] = dcc.Dropdown(id={"type": "i_e_pos", "index": cb.get("index")},
+            e_in[cb.get("index")] = dcc.Dropdown(id={"type": "i_e_mpe", "index": cb.get("index")},
                                                  options={k: v for k, v in zip(variable.domain,
                                                                                variable.domain)},
                                                  value=list(variable.domain),
@@ -140,10 +157,10 @@ def post_router(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
                                                           tooltip={"placement": "bottom", "always_visible": False})
 
         if len(e_var) - 1 == cb.get("index"):
-            return *c.add_selector_to_div_button(c.in_use_model, e_var, e_in, e_op, "e_pos", cb.get("index") + 1), \
-                c.create_prefix_text_query(len(e_var), len(e_var)), q_var, modal_basic_pos, False
-    elif cb.get("type") == "b_e_pos" and dd_vals[cb.get("index")] != []:
-        # Dont Like dont know to do it other wise
+            return *c.add_selector_to_div_button(c.in_use_model, e_var, e_in, e_op, "e_mpe", cb.get("index") + 1), \
+                c.create_prefix_text_mpe(len(e_var)), q_var, modal_basic_mpe, False
+    elif cb.get("type") == "b_e_mpe" and dd_vals[cb.get("index")] != []:
+        # Dont Like dont know to do it otherwise
         global modal_var_index
         modal_var_index = cb.get("index")
         variable = c.vardict[dd_vals[cb.get("index")]]
@@ -152,35 +169,33 @@ def post_router(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
             modal_body = c.generate_modal_option(model=c.in_use_model, var=e_var[cb.get("index")]['props']['value'],
                                                  value=[e_in[cb.get("index")]['props']['min'],
                                                         e_in[cb.get("index")]['props']['max']],
-                                                 priors=c.prior, id="_pos")
+                                                 priors=c.prior, id="_mpe")
         elif isinstance(variable, random_events.variables.Symbolic) or isinstance(variable, random_events.variables.Integer):
             modal_body = c.generate_modal_option(model=c.in_use_model, var=e_var[cb.get("index")]['props']['value'],
                                                  value=e_in[cb.get("index")]['props'].get('value'), priors=c.prior,
-                                                 id="_pos")
+                                                 id="_mpe")
 
-        return e_var, e_in, e_op, c.create_prefix_text_query(len(e_var), len(e_var)), q_var, modal_body, True
-    elif cb.get("type") == "option_save_pos":
-        variable = c.vardict[dd_vals[cb.get("index")]]
+        return e_var, e_in, e_op, c.create_prefix_text_mpe(len(e_var)), q_var, modal_body, True
+    elif cb.get("type") == "option_save_mpe":
         new_vals = List
+        variable = c.vardict[dd_vals[cb.get("index")]]
         if isinstance(variable, random_events.variables.Continuous) or isinstance(variable, random_events.variables.Integer):
             new_vals = c.fuse_overlapping_range(op_i)
         else:
-            new_vals = op_i[0]#is List of a List
+            new_vals = op_i[0]  # is List of a List
         e_in[modal_var_index]['props']['value'] = new_vals
-        e_in[modal_var_index]['props']['drag_value'] = new_vals
-        return e_var, e_in, e_op, c.create_prefix_text_query(len(e_var), len(e_var)), q_var, modal_basic_pos, False
+        return e_var, e_in, e_op, c.create_prefix_text_mpe(len(e_var)), q_var, modal_basic_mpe, False
 
-    return c.update_free_vars_in_div(c.in_use_model, e_var), e_in, e_op, c.create_prefix_text_query(len(e_var),
-                                                                                                   len(e_var)), \
-        q_var, modal_basic_pos, False
+    return c.update_free_vars_in_div(c.in_use_model, e_var), e_in, e_op, c.create_prefix_text_mpe(len(e_var)), \
+        q_var, modal_basic_mpe, False
 
 
 @callback(
-    Output("modal_input_pos", "children"),
-    Input("op_add_pos", "n_clicks"),
-    Input({'type': 'op_i_pos', 'index': ALL}, 'value'),
-    State("modal_input_pos", "children"),
-    State({'type': 'dd_e_pos', 'index': ALL}, 'value'),
+    Output("modal_input_mpe", "children"),
+    Input("op_add_mpe", "n_clicks"),
+    Input({'type': 'op_i_mpe', 'index': ALL}, 'value'),
+    State("modal_input_mpe", "children"),
+    State({'type': 'dd_e_mpe', 'index': ALL}, 'value'),
 )
 def modal_router(op, op_i, m_bod, dd):
     """
@@ -201,7 +216,7 @@ def modal_router(op, op_i, m_bod, dd):
         m_in_new = [m_bod]
     else:
         m_in_new = m_bod
-    if cb == "op_add_pos":
+    if cb == "op_add_mpe":
         index = m_in_new[-2]['props']['children'][0]['props']['children'][1]['props']['id']['index']
         type = m_in_new[1]['props']['children'][0]['props']['children'][1]['type']
         if isinstance(variable, random_events.variables.Continuous):
@@ -210,7 +225,7 @@ def modal_router(op, op_i, m_bod, dd):
             maxi = m_in_new[1]['props']['children'][0]['props']['children'][1]['props']['max']
             range_string = html.Div(f"Range {index + 2}",
                                     style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
-            n_slider = c.create_range_slider(minimum=mini, maximum=maxi, id={'type': 'op_i_pos', 'index': index + 1},
+            n_slider = c.create_range_slider(minimum=mini, maximum=maxi, id={'type': 'op_i_mpe', 'index': index + 1},
                                              value=[mini, maxi], dots=False,
                                              tooltip={"placement": "bottom", "always_visible": False},
                                              className="flex-fill")
@@ -233,7 +248,7 @@ def modal_router(op, op_i, m_bod, dd):
             range_string = html.Div(f"Range {index + 2}",
                                     style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal)-1)]))
             n_slider = c.create_range_slider(minimum=mini, maximum=maxi, value=[mini, maxi]
-                                                          ,id={'type': 'op_i_pos', 'index': index + 1}, dots=False,
+                                                          ,id={'type': 'op_i_mpe', 'index': index + 1}, dots=False,
                                                           marks=markings,
                                                           tooltip={"placement": "bottom", "always_visible": False},
                                             className="flex-fill")
@@ -258,69 +273,64 @@ def modal_router(op, op_i, m_bod, dd):
 
 
 @callback(
-    Output('head_erg_pos', 'children'),
-    Output('pos_erg_pos', 'children'),
-    Output('b_erg_pre_pos', 'disabled'),
-    Output('b_erg_next_pos', 'disabled'),
-    Input('erg_b_pos', 'n_clicks'),
-    Input('b_erg_pre_pos', 'n_clicks'),
-    Input('b_erg_next_pos', 'n_clicks'),
-    State({'type': 'dd_e_pos', 'index': ALL}, 'value'),
-    State({'type': 'i_e_pos', 'index': ALL}, 'value'),
-    State('q_variable_pos', 'children'),
+    Output('mpe_erg', 'children'),
+    Output('b_erg_pre_mpe', 'disabled'),
+    Output('b_erg_next_mpe', 'disabled'),
+    Input('erg_b_mpe', 'n_clicks'),
+    Input('b_erg_pre_mpe', 'n_clicks'),
+    Input('b_erg_next_mpe', 'n_clicks'),
+    State({'type': 'dd_e_mpe', 'index': ALL}, 'value'),
+    State({'type': 'i_e_mpe', 'index': ALL}, 'value'),
 )
-def erg_controller(n1, n2, n3, e_var, e_in, q_var):
+def erg_controller(n1, n2, n3, e_var, e_in):
     """
-        Conntroller for the Results and the Displays
+        Manages the MPE Reulst and the Switch if possible between Results
     :param n1: event for generating Result
     :param n2: the Previous Result
     :param n3: the Next Result
     :param e_var: the Dropdown of variable of Evidence Section
     :param e_in: the Input for the Variables of Evidence Section
-    :param q_var: the Dropdown of variable of Query Section
-    :return: Returns the Name of The Variabel, the plot of the Variable, if there is a pre or post result
+    :return: Div of the Result and if Previous or Next Result exists
     """
-    global result
+    global mode
     global page
-    vals = q_var[0]['props']['value']
+    global likelihood
     cb = ctx.triggered_id if not None else None
     if cb is None:
-        return [], [], True, True
-    if cb == "b_erg_pre_pos":
+        return [], True, True
+    if cb == "b_erg_pre_mpe":
         page -= 1
         if page == 0:
-            return vals[page], plot_post(vals, page, result), True, False
+            return mpe(mode[page], likelihood), True, False
         else:
-            return vals[page], plot_post(vals, page, result), False, False
-    elif cb == "b_erg_next_pos":
+            return mpe(mode[page], likelihood), False, False
+    elif cb == "b_erg_next_mpe":
         page += 1
-        if len(vals) > page + 1:
-            return vals[page], plot_post(vals, page, result), False, False
+        if len(mode) > page + 1:
+            return mpe(mode[page], likelihood), False, False
         else:
-            return vals[page], plot_post(vals, page, result), False, True
-    elif vals == [] or cb == "b_erg_pos":
-        return [], [], True, True
+            return mpe(mode[page], likelihood), False, True
     else:
         page = 0
         evidence_dict = c.div_to_event(c.in_use_model, e_var, e_in)
         try:
-            result = c.calculate_posterior_distributions(evidence_dict, c.in_use_model)
+            conditional_model, evidence_probability = c.in_use_model.conditional(evidence_dict)
+            mode, likelihood = conditional_model.mode()
+
         except Exception as e:
             print("Error was", type(e), e)
-            return "", [html.Div("Unsatisfiable", className="fs-1 text text-center pt-3 ")], True, True
-        if len(vals) > 1:
-            return vals[page], plot_post(vals, page, result), True, False
+            return [html.Div("Unsatisfiable", className="fs-1 text text-center pt-3 ")], True, True
+        if len(mode) > 1:
+            return mpe(mode[0], likelihood), True, False
         else:
-            return vals[page], plot_post(vals, page, result), True, True
+            return mpe(mode[0], likelihood), True, True
 
 
-def plot_post(vars: List, n: int, result):
+def mpe(res, likelihood):
     """
-        Generates the Plots for a Varibel in Vars postion n
-    :param vars: List of Variabel
-    :param n: Postion of the Choosen Variabel
-    :return:  Plot
+        Generates the Result from Res of a Variable
+    :param res:  Results of a specific Variable
+    :param likelihood: The likelihood of the maxima
+    :return: Div around the generated mpe Result of the Variable
     """
-    var_name = vars[n]
-    variable = c.vardict[var_name]
-    return c.generate_plot_for_variable(variable, result)
+    return c.mpe_result_to_div(c.in_use_model, res, likelihood)

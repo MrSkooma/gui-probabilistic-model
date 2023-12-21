@@ -1,14 +1,14 @@
 import base64
 import os.path
 
-import jpt
-import jpt.distributions.univariate
+
 import igraph
 import numpy as np
+import random_events.events
 from igraph import Graph, EdgeSeq
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
-from jpt.base.utils import list2interval
+
 import dash
 from dash import dcc, html, Input, Output, State, ctx, MATCH, ALLSMALLER, ALL
 import math
@@ -16,6 +16,10 @@ import json
 import components as c
 from typing import List
 import sys, getopt
+from probabilistic_model import probabilistic_model as pm
+from probabilistic_model.learning.jpt import jpt
+
+from random_events.events import VariableMap
 
 '''
 This is the main Programming where the Server will be started and the navigator are constructed.
@@ -96,10 +100,14 @@ def tree_update(upload):
         except Exception as e:
             print(e)
             return False, "/"
-        c.in_use_tree = io_tree
-        c.priors = io_tree.priors
+        c.in_use_model = io_tree
+        c.vardict = {var.name: var for var in io_tree.variables}
+        c.prior = c.create_prior_distributions(io_tree)
         return True, "/empty"
     return False, "/"
+
+
+
 
 
 if __name__ == '__main__':
@@ -108,8 +116,9 @@ if __name__ == '__main__':
             tree = open(pre_tree, "rb")
             tree_data = tree.read()
             io_tree = jpt.JPT.from_json(json.loads(tree_data))
-            c.in_use_tree = io_tree
-            c.priors = io_tree.priors
+            c.in_use_model = io_tree
+            c.vardict = {var.name: var for var in io_tree.variables}
+            c.prior = c.create_prior_distributions(io_tree)
             tree.close()
         except Exception:
             print("File could not be read")
@@ -119,3 +128,9 @@ if __name__ == '__main__':
 
 
 
+"""
+Fragen:
+var daten sind falsch doer Condtional wird nicht korrect genutzt siehe Home bz. Input erstellung in QUery
+Perfomenz ist schrecklich vtl ich aber scheint aufrufe auf PM zu sein mach böse aufrufe?
+Plot scheint nicht für plotly functional zusein was für system wurde das geschrieben?
+"""
