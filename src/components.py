@@ -14,9 +14,9 @@ from random_events.variables import Continuous
 import numpy as np
 
 in_use_model: pm.ProbabilisticModel
-in_use_model = pm.ProbabilisticModel([Continuous("A")])  # need to be pm model fully
+in_use_model = pm.ProbabilisticModel([Continuous("")])  # need to be pm model fully
 vardict: dict
-vardict = None
+vardict = dict()
 prior: random_events.events.VariableMap
 prior = None
 
@@ -169,7 +169,7 @@ def generate_modal_option(model: pm.ProbabilisticModel, var: str, value: List[st
             html.Div([  # Inputs
                 html.Div("Range 1" if not is_simbolic else "Dropmenu", style=dict(color=color_list_modal[0])),
                 correct_input_div(variable, value, priors=priors, id=id, className="d-flex flex-fill"),
-                html.Div(f"{probs}", style=dict(color=color_list_modal[0])),
+                html.Div(f"{round(probs,5)}", style=dict(color=color_list_modal[0])),
             ], id="modal_color_0", className="d-flex justify-content-evenly ps-2")
         ], className="d-flex justify-content-evenly"),
         dbc.Row([

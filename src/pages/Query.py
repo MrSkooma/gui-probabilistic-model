@@ -1,4 +1,3 @@
-import json
 
 import dash_bootstrap_components as dbc
 import dash
@@ -372,9 +371,7 @@ def modal_router(op, op_i, m_bod, dd_e, dd_q):
                                              className="flex-fill")
             var_map = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
             prob = c.in_use_model.probability(var_map)
-#TODOO
-            #Probilty normalizing?
-            prob_div = html.Div(f"{prob}",
+            prob_div = html.Div(f"{round(prob,5)}",
                                 style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
             m_in_new.insert(len(m_in_new) - 1, dbc.Row([
                 html.Div([range_string, n_slider, prob_div],
@@ -396,7 +393,7 @@ def modal_router(op, op_i, m_bod, dd_e, dd_q):
                                              className="flex-fill")
             var_map = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
             prob = c.in_use_model.probability(var_map)
-            prob_div = html.Div(f"{prob}",
+            prob_div = html.Div(f"{round(prob, 5)}",
                                 style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
             m_in_new.insert(len(m_in_new) - 1, dbc.Row([
                 html.Div([range_string, n_slider, prob_div],
@@ -412,7 +409,7 @@ def modal_router(op, op_i, m_bod, dd_e, dd_q):
         value = m_in_new[id + 1]['props']['children'][0]['props']['children'][1]['props']['value']
         var_map = c.div_to_event(c.in_use_model, [var], [value])
         prob = c.in_use_model.probability(var_map)
-        prob_div = html.Div(f"{prob}", style=dict(color=c.color_list_modal[id % (len(c.color_list_modal) - 1)]))
+        prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=c.color_list_modal[id % (len(c.color_list_modal) - 1)]))
         m_in_new[id + 1]['props']['children'][0]['props']['children'][2] = prob_div
         return m_in_new
 
@@ -444,7 +441,7 @@ def infer(q_var, q_in, e_var, e_in):
     except Exception as e:
         print(e)
         return "Unsatasfiable"
-    return "P(Q|E) = {p_e}% * {p_q}% / {p_e}% = {p_q}%".format(p_q=round(p_q * 100, 2), p_e=round(p_e * 100, 2))
+    return f"P(Q|E) = {round(p_e, 2) * round(p_q, 2)*100}% / {round(p_e * 100, 2)}% = {round(p_q * 100, 2)}%"
 r"""
     P(Q|E)
      = 

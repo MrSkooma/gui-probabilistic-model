@@ -217,7 +217,7 @@ def modal_router(op, op_i, m_bod, dd):
             var_map = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
             prob = c.in_use_model.probability(var_map)
 
-            prob_div = html.Div(f"{prob}",
+            prob_div = html.Div(f"{round(prob, 5)}",
                                 style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
             m_in_new.insert(len(m_in_new) - 1, dbc.Row([
                 html.Div([range_string, n_slider, prob_div],
@@ -239,7 +239,7 @@ def modal_router(op, op_i, m_bod, dd):
                                             className="flex-fill")
             var_map = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
             prob = c.in_use_model.probability(var_map)
-            prob_div = html.Div(f"{prob}", style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal)-1)]))
+            prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal)-1)]))
             m_in_new.insert(len(m_in_new) - 1, dbc.Row([
                 html.Div([range_string, n_slider, prob_div], id=f"modal_color_{(index + 1) % (len(c.color_list_modal)-1)}", className="d-flex flex-nowrap justify-content-center ps-2")
             ],className="d-flex justify-content-center"))
@@ -252,7 +252,7 @@ def modal_router(op, op_i, m_bod, dd):
         value = m_in_new[id + 1]['props']['children'][0]['props']['children'][1]['props']['value']
         var_map = c.div_to_event(c.in_use_model, [var], [value])
         prob = c.in_use_model.probability(var_map)
-        prob_div = html.Div(f"{prob}", style=dict(color=c.color_list_modal[id % (len(c.color_list_modal) - 1)]))
+        prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=c.color_list_modal[id % (len(c.color_list_modal) - 1)]))
         m_in_new[id + 1]['props']['children'][0]['props']['children'][2] = prob_div
         return m_in_new
 
