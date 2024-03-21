@@ -17,9 +17,9 @@ def gen_varnames(children):
     if c.vardict is None or (len(c.vardict) <= 1):
         return var_divs
     for variable, distrubiton in c.prior.items():
+        var_name = variable.name
         if isinstance(variable, random_events.variables.Continuous):
             dis_val_event = c.prior[variable].domain.events[0]
-            var_name = variable.name
             mini = dis_val_event[variable].lower
             maxi = dis_val_event[variable].upper
 
