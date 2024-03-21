@@ -4,7 +4,7 @@ import dash
 from dash import dcc, html, Input, Output, State, ctx, ALL, callback
 import components as c
 from typing import List
-from probabilistic_model import probabilistic_model as pm
+from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
 import random_events.variables
 
 global result
@@ -116,8 +116,8 @@ def post_router(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
         variable = c.vardict[dd_vals[cb.get("index")]]
         if isinstance(variable, random_events.variables.Continuous):
 
-            minimum = c.prior[variable].domain[variable].lower
-            maximum = c.prior[variable].domain[variable].upper
+            minimum = c.prior[variable].domain.events[0][variable].lower
+            maximum = c.prior[variable].domain.events[0][variable].upper
             e_in[cb.get("index")] = c.create_range_slider(minimum, maximum,
                                                           id={'type': 'i_e_pos', 'index': cb.get("index")},
                                                           dots=False,

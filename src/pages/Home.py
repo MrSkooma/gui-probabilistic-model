@@ -3,9 +3,8 @@ import random_events.variables
 from dash import html, Input, Output, callback
 import components as c
 import dash_bootstrap_components as dbc
-from probabilistic_model import probabilistic_model as pm
-
-
+from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
+from random_events.events import Event
 dash.register_page(__name__, path='/')
 
 
@@ -19,15 +18,16 @@ def gen_varnames(children):
         return var_divs
     for variable, distrubiton in c.prior.items():
         if isinstance(variable, random_events.variables.Continuous):
-            dis_val_event = distrubiton.domain[variable]
+            dis_val_event = c.prior[variable].domain.events[0]
             var_name = variable.name
-            mini = dis_val_event.lower
-            maxi = dis_val_event.upper
+            mini = dis_val_event[variable].lower
+            maxi = dis_val_event[variable].upper
+
             childStr = [html.Div(var_name, className="fs-4  flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(" ∈ ", className="pe-2 ps-1 fs-4  flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(f"[{round(mini,3)}, {round(maxi, 3)}]", className="fs-4  flex-nowrap flex-grow-0 text-nowrap text-start")]
             var_divs.append(html.Div(childStr, className="d-flex justify-content-center flex-grow-0"))
         else:
-            dis_val_event = distrubiton.domain[variable]
-            vals = list(dis_val_event)
+            dis_val_event = c.prior[variable].domain.events[0]
+            vals = dis_val_event[variable]
             childStr = [html.Div(var_name, className="fs-4 flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(" ∈ ", className="pe-2 ps-1 fs-4 flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(f"({vals})", className="fs-4 flex-nowrap flex-grow-0 text-nowrap text-start")]
             var_divs.append(html.Div(childStr, className="d-flex justify-content-center flex-grow-0"))
     return var_divs

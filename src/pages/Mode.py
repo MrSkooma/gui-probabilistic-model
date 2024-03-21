@@ -1,6 +1,6 @@
 from typing import List
 
-from probabilistic_model import probabilistic_model as pm
+from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
 import random_events.variables
 import dash_bootstrap_components as dbc
 import dash
@@ -132,8 +132,8 @@ def evid_gen(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
 
         variable = c.vardict[dd_vals[cb.get("index")]]
         if isinstance(variable, random_events.variables.Continuous):
-            minimum = c.prior[variable].domain[variable].lower
-            maximum = c.prior[variable].domain[variable].upper
+            minimum = c.prior[variable].domain.events[0][variable].lower
+            maximum = c.prior[variable].domain.events[0][variable].upper
             e_in[cb.get("index")] = c.create_range_slider(minimum, maximum,
                                                           id={'type': 'i_e_mpe', 'index': cb.get("index")}
                                                           , dots=False,
@@ -301,29 +301,28 @@ def erg_controller(n1, n2, n3, e_var, e_in):
     if cb == "b_erg_pre_mpe":
         page -= 1
         if page == 0:
-            return mpe(mode[page], likelihood), True, False
+            return mpe(mode.events[page], likelihood), True, False
         else:
-            return mpe(mode[page], likelihood), False, False
+            return mpe(mode.events[page], likelihood), False, False
     elif cb == "b_erg_next_mpe":
         page += 1
-        if len(mode) > page + 1:
-            return mpe(mode[page], likelihood), False, False
+        if len(mode.events) > page + 1:
+            return mpe(mode.events[page], likelihood), False, False
         else:
-            return mpe(mode[page], likelihood), False, True
+            return mpe(mode.events[page], likelihood), False, True
     else:
         page = 0
         evidence_dict = c.div_to_event(c.in_use_model, e_var, e_in)
         try:
             conditional_model, evidence_probability = c.in_use_model.conditional(evidence_dict)
             mode, likelihood = conditional_model.mode()
-
         except Exception as e:
             print("Error was", type(e), e)
             return [html.Div("Unsatisfiable", className="fs-1 text text-center pt-3 ")], True, True
-        if len(mode) > 1:
-            return mpe(mode[0], likelihood), True, False
+        if len(mode.events) > 1:
+            return mpe(mode.events[0], likelihood), True, False
         else:
-            return mpe(mode[0], likelihood), True, True
+            return mpe(mode.events[0], likelihood), True, True
 
 
 def mpe(res, likelihood):

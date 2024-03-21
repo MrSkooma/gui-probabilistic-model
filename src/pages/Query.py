@@ -5,7 +5,7 @@ import dash
 from dash import dcc, html, Input, Output, State, ctx, ALL, callback
 import components as c
 from typing import List
-from probabilistic_model import probabilistic_model as pm
+from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
 import random_events.variables
 """
 On this Page there can be ask Query Situation. 
@@ -126,8 +126,8 @@ def query_gen(dd_vals: List, q_var: List, q_in: List, q_op):
     variable = c.vardict[dd_vals[cb.get("index")]]
 
     if isinstance(variable, random_events.variables.Continuous):
-        minimum = c.prior[variable].domain[variable].lower
-        maximum = c.prior[variable].domain[variable].upper
+        minimum = c.prior[variable].domain.events[0][variable].lower
+        maximum = c.prior[variable].domain.events[0][variable].upper
 
         q_in[cb.get("index")] = c.create_range_slider(minimum, maximum,
                                                       id={'type': 'i_q_que', 'index': cb.get("index")},
@@ -173,8 +173,8 @@ def evid_gen(dd_vals, e_var, e_in, e_op):
     #Domain CHekcing if works
     variable = c.vardict[dd_vals[cb.get("index")]]
     if isinstance(variable, random_events.variables.Continuous):
-        minimum = c.prior[variable].domain[variable].lower
-        maximum = c.prior[variable].domain[variable].upper
+        minimum = c.prior[variable].domain.events[0][variable].lower
+        maximum = c.prior[variable].domain.events[0][variable].upper
         e_in[cb.get("index")] = c.create_range_slider(minimum, maximum,
                                                       id={'type': 'i_e_que', 'index': cb.get("index")},
                                                       tooltip={"placement": "bottom", "always_visible": False})
@@ -429,17 +429,15 @@ def infer(q_var, q_in, e_var, e_in):
 
     query = c.div_to_event(c.in_use_model, q_var, q_in)
     evidence = c.div_to_event(c.in_use_model, e_var, e_in)
+    t = c.in_use_model
 
 
     try:
-        c.in_use_model: pm.ProbabilisticModel
+
+        c.in_use_model: ProbabilisticCircuit
         conditional_model, p_e = c.in_use_model.conditional(evidence)
         p_q = conditional_model.probability(query)
-        print(p_q)
-
-#TODOO New Format look Infer Components or APP
     except Exception as e:
-        print(e)
         return "Unsatasfiable"
     return f"P(Q|E) = {round(p_e, 2) * round(p_q, 2)*100}% / {round(p_e * 100, 2)}% = {round(p_q * 100, 2)}%"
 r"""

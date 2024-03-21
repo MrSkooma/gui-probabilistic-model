@@ -16,8 +16,9 @@ import json
 import components as c
 from typing import List
 import sys, getopt
-from probabilistic_model import probabilistic_model as pm
-from probabilistic_model.learning.jpt import jpt
+from probabilistic_model.utils import SubclassJSONSerializer as Serializer
+from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, ProbabilisticCircuitMixin
+import probabilistic_model.learning.jpt.jpt
 
 from random_events.events import VariableMap
 
@@ -96,7 +97,15 @@ def tree_update(upload):
             content_type, content_string = upload.split(',')
             decoded = base64.b64decode(content_string)
             content_decided_string = decoded.decode("utf-8")
-            io_tree = jpt.JPT.from_json(json.loads(decoded))
+            io_tree = Serializer.from_json(json.loads(content_decided_string))
+
+            if isinstance(io_tree, ProbabilisticCircuit):
+                ...
+            elif isinstance(io_tree, ProbabilisticCircuitMixin):
+                io_tree = io_tree.probabilistic_circuit
+            else:
+                raise ValueError(f"Type {type(io_tree)} not supported")
+
         except Exception as e:
             print(e)
             return False, "/"
@@ -115,14 +124,22 @@ if __name__ == '__main__':
         try:
             tree = open(pre_tree, "rb")
             tree_data = tree.read()
-            io_tree = jpt.JPT.from_json(json.loads(tree_data))
+            io_tree = Serializer.from_json(json.loads(tree_data))
+            if isinstance(io_tree, ProbabilisticCircuit):
+                ...
+            elif isinstance(io_tree, ProbabilisticCircuitMixin):
+                io_tree = io_tree.probabilistic_circuit
+            else:
+                raise ValueError(f"Type {type(io_tree)} not supported")
+
             c.in_use_model = io_tree
             c.vardict = {var.name: var for var in io_tree.variables}
             c.prior = c.create_prior_distributions(io_tree)
             tree.close()
-        except Exception:
-            print("File could not be read")
-            exit(1)
+        except Exception as e:
+            print("file could not be read")
+            raise e
+
 
     app.run(**app_tags)
 

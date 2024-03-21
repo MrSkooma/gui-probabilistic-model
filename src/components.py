@@ -1,6 +1,8 @@
 import math
 
+import networkx as nx
 import random_events.variables
+from jpt.base.functions import deque
 from random_events.events import VariableMap
 from dash import dcc, html
 import plotly.graph_objects as go
@@ -9,12 +11,12 @@ import dash_bootstrap_components as dbc
 from typing import List
 import os
 import portion
-from probabilistic_model import probabilistic_model as pm
+from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
 from random_events.variables import Continuous
 import numpy as np
 
-in_use_model: pm.ProbabilisticModel
-in_use_model = pm.ProbabilisticModel([Continuous("")])  # need to be pm model fully
+in_use_model: ProbabilisticCircuit
+in_use_model = ProbabilisticCircuit()  # need to be pm model fully
 vardict: dict
 vardict = dict()
 prior: random_events.events.VariableMap
@@ -99,8 +101,8 @@ def correct_input_div(variable, value, priors, id, **kwargs):
     :return: a Dash Componant that displays the variable
     """
     if isinstance(variable, random_events.variables.Continuous):
-        minimum = priors[variable].domain[variable].lower
-        maximum = priors[variable].domain[variable].upper
+        minimum = priors[variable].domain.events[0][variable].lower
+        maximum = priors[variable].domain.events[0][variable].upper
         rang = create_range_slider(minimum, maximum, id={'type': f'op_i{id}', 'index': 0}, value=value, dots=False,
                                    tooltip={"placement": "bottom", "always_visible": False}, **kwargs)
         return rang
@@ -141,7 +143,7 @@ def generate_plot_for_variable(variable, result):
 
 
 
-def generate_modal_option(model: pm.ProbabilisticModel, var: str, value: List[str or int or float], priors, id):
+def generate_modal_option(model: ProbabilisticCircuit, var: str, value: List[str or int or float], priors, id):
     """
         Creates a modal for Zoom for a chosen Variabel, the Style is static
     :param model: the model of the Tree
@@ -245,7 +247,7 @@ def value_getter_from_children(children: List[dict]):
     return value
 
 
-def div_to_variablemap(model: pm.ProbabilisticModel, variables: List,
+def div_to_variablemap(model: ProbabilisticCircuit, variables: List,
                        constrains: List) -> random_events.events.VariableMap:
     """
         Transforms variable and Constrains List form the GUI to a VariableMap
@@ -269,7 +271,7 @@ def div_to_variablemap(model: pm.ProbabilisticModel, variables: List,
     return var_dict
     # return jpt.variables.VariableMap([(model.varnames[k], v) for k, v in var_dict.items()])
 
-def div_to_event(model: pm.ProbabilisticModel, variables: List,
+def div_to_event(model: ProbabilisticCircuit, variables: List,
                        constrains: List) -> random_events.events.VariableMap:
     """
         Transforms variable and Constrains List form the GUI to a VariableMap
@@ -294,7 +296,7 @@ def div_to_event(model: pm.ProbabilisticModel, variables: List,
     # return jpt.variables.VariableMap([(model.varnames[k], v) for k, v in var_dict.items()])
 
 
-def mpe_result_to_div(model: pm.ProbabilisticModel, res: random_events.events.VariableMap, likelihood: float) -> List:
+def mpe_result_to_div(model: ProbabilisticCircuit, res: random_events.events.VariableMap, likelihood: float) -> List:
     """
         Generate Visuel Dash Representation for result of the mpe jpt func
     :param res: one of the Results from mpe func
@@ -325,8 +327,8 @@ def mpe_result_to_div(model: pm.ProbabilisticModel, res: random_events.events.Va
             else:
                 value += [res[variable].lower, res[variable].upper]
             #Assume always range values in a list data type
-            minimum = prior[variable].domain[variable].lower
-            maximum = prior[variable].domain[variable].upper
+            minimum = prior[variable].domain.events[0][variable].lower
+            maximum = prior[variable].domain.events[0][variable].upper
             return_div += [html.Div(
                 [dcc.Dropdown(options=[variable.name], value=variable.name, disabled=True, className="margin10"),
                  create_range_slider(minimum, maximum, value=value, disabled=True, className="margin10",
@@ -377,7 +379,7 @@ def create_prefix_text_mpe(len_fac: int) -> List:
     ]
 
 
-def generate_free_variables_from_div(model: pm.ProbabilisticModel, variable_div: List) -> List[str]:
+def generate_free_variables_from_div(model: ProbabilisticCircuit, variable_div: List) -> List[str]:
     """
         Peels the names out of variable_div elements and uses generate_free_variables_from_list for the Return
     :param model: the JPT model of the Prob. Tree
@@ -393,7 +395,7 @@ def generate_free_variables_from_div(model: pm.ProbabilisticModel, variable_div:
     return generate_free_variables_from_list(model, variables)
 
 
-def generate_free_variables_from_list(model: pm.ProbabilisticModel, variable_list: List[str]) -> List[str]:
+def generate_free_variables_from_list(model: ProbabilisticCircuit, variable_list: List[str]) -> List[str]:
     """
         Deletes all used Variable Names out of a List of all Variables Names.
     :param model: the JPT model of the Prob. Tree
@@ -409,7 +411,7 @@ def generate_free_variables_from_list(model: pm.ProbabilisticModel, variable_lis
     return list(vars_free.keys())
 
 
-def update_free_vars_in_div(model: pm.ProbabilisticModel, variable_div: List) -> List:
+def update_free_vars_in_div(model: ProbabilisticCircuit, variable_div: List) -> List:
     """
         Updates the Variable Options for a Dash Dropdown for choosing Variables, to all not in use Variables.
     :param model: the JPT model of the Prob. Tree
@@ -442,7 +444,7 @@ def reduce_index(index, number, list) -> List:
     return list
 
 
-def del_selector_from_div(model: pm.ProbabilisticModel, variable_div: List, constrains_div: List, del_index: int) \
+def del_selector_from_div(model: ProbabilisticCircuit, variable_div: List, constrains_div: List, del_index: int) \
         -> (List, List):
     """
         Deletes a Row from the Option + Constrains and Rebuilds all Choices for Variables
@@ -465,7 +467,7 @@ def del_selector_from_div(model: pm.ProbabilisticModel, variable_div: List, cons
     return new_var_list, constrains_list
 
 
-def del_selector_from_div_button(model: pm.ProbabilisticModel, variable_div: List, constrains_div: List,
+def del_selector_from_div_button(model: ProbabilisticCircuit, variable_div: List, constrains_div: List,
                                  option_div: List, del_index: int) -> (List, List):
     """
         Deletes a Row from the Option + Constrains and Rebuilds all Choices for Variables
@@ -498,7 +500,7 @@ def del_selector_from_div_button(model: pm.ProbabilisticModel, variable_div: Lis
     return new_var_list, constrains_list, option_list
 
 
-def add_selector_to_div(model: pm.ProbabilisticModel, variable_div: List, constrains_div: list, type: str,
+def add_selector_to_div(model: ProbabilisticCircuit, variable_div: List, constrains_div: list, type: str,
                         index: int) \
         -> (List[dcc.Dropdown], List):
     """
@@ -523,7 +525,7 @@ def add_selector_to_div(model: pm.ProbabilisticModel, variable_div: List, constr
 
 
 # --- Button Func ---
-def add_selector_to_div_button(model: pm.ProbabilisticModel, variable_div, constrains_div, option_div, type: str,
+def add_selector_to_div_button(model: ProbabilisticCircuit, variable_div, constrains_div, option_div, type: str,
                                index: int) \
         -> (List[dcc.Dropdown], List, List):
     """
@@ -553,7 +555,7 @@ def add_selector_to_div_button(model: pm.ProbabilisticModel, variable_div, const
     return variable_list, constrains_list, option_list
 
 
-def reset_gui_button(model: pm.ProbabilisticModel, type: str):
+def reset_gui_button(model: ProbabilisticCircuit, type: str):
     """
         Resets the GUI Parts back to Start + Button
     :param model: the JPT Tree
@@ -570,7 +572,7 @@ def reset_gui_button(model: pm.ProbabilisticModel, type: str):
 # --- Button Func ---
 
 
-def reset_gui(model: pm.ProbabilisticModel, type: str) -> (List, List):
+def reset_gui(model: ProbabilisticCircuit, type: str) -> (List, List):
     """
         Resets the GUI Parts back to Start
     :param model: the JPT Tree
@@ -806,26 +808,15 @@ def get_default_dic_pos():
 
 # ---- PM NEW STUFF -----
 
-def create_prior_distributions(model: pm.ProbabilisticModel):
+def create_prior_distributions(model: ProbabilisticCircuit):
     prior_distributions = VariableMap()
     for variable in model.variables:
         prior_distributions[variable] = model.marginal([variable])
     return prior_distributions
 
 
-# def calculate_conditional_probability(query: random_events.events.Event, evidence: random_events.events.Event,
-#                                       model: pm.ProbabilisticModel):
-#     conditional_model, evidence_probability = model.conditional(evidence)
-#     conditional_probability = conditional_model.probability(query)
-#
-#     r"""
-#     P(Q|E)
-#      =
-#      \frac{P(Q, E)}{P(E)} = \frac{conditional_probability * evidence_probability}{evidence_probability} = conditional_probability
-#     """
 
-
-def calculate_posterior_distributions(evidence: random_events.events.Event, model: pm.ProbabilisticModel):
+def calculate_posterior_distributions(evidence: random_events.events.Event, model: ProbabilisticCircuit):
     posterior_distributions = VariableMap()
 
     conditional_model, evidence_probability = model.conditional(evidence)
@@ -836,8 +827,65 @@ def calculate_posterior_distributions(evidence: random_events.events.Event, mode
     return posterior_distributions
 
 
-# def calculate_mpe(evidence: random_events.events.Event, model: pm.ProbabilisticModel):
-#     conditional_model, evidence_probability = model.conditional(evidence)
-#
-#     conditional_model.mode()
-#     ...
+def plot_3d(model: ProbabilisticCircuit):
+    import plotly.graph_objects as go
+
+
+    graph_to_plot = nx.DiGraph()
+
+    nodes_to_plot_queue = deque([model.root])
+
+    while len(nodes_to_plot_queue) > 0:
+        current_node = nodes_to_plot_queue.popleft()
+        graph_to_plot.add_node(current_node)
+        for edge in model.in_edges(current_node):
+            graph_to_plot.add_edge(*edge)
+
+        if len(current_node.variables) == 1:
+            continue
+
+        for subcircuit in current_node.subcircuits:
+            nodes_to_plot_queue.append(subcircuit)
+
+    # Compute positions using an algorithm (e.g., Kamada-Kawai layout)
+    # pos = nx.spring_layout(self, scale=0.5, dim=3, threshold=2.0531, k=2, weight=1, iterations=100)
+    pos = nx.spring_layout(graph_to_plot, dim=3, scale=0.5)
+    # Extract node positions
+    node_positions = {node: pos[node] for node in graph_to_plot.nodes}
+
+    # Create a Plotly figure
+    fig = go.Figure(layout=go.Layout(showlegend=False, scene=dict(aspectmode='data')))
+
+    # Add edges
+    for edge in graph_to_plot.edges():
+        x0, y0, z0 = node_positions[edge[0]]
+        x1, y1, z1 = node_positions[edge[1]]
+        fig.add_trace(go.Scatter3d(
+            x=[x0, x1],
+            y=[y0, y1],
+            z=[z0, z1],
+            mode='lines',
+            line=dict(color='black', width=3)
+        ))
+
+    for node in graph_to_plot.nodes():
+        x, y, z = node_positions[node]
+        for mark in node.marker_3d:
+            fig.add_trace(go.Scatter3d(
+                x=[x],
+                y=[y],
+                z=[z],
+                mode='markers',
+                marker=mark
+            ))
+
+    # Update layout
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(title='X'),
+            yaxis=dict(title='Y'),
+            zaxis=dict(title='Z'),
+        )
+    )
+
+    return fig
