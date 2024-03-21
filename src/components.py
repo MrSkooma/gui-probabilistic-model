@@ -3,6 +3,8 @@ import math
 import networkx as nx
 import random_events.variables
 from jpt.base.functions import deque
+from probabilistic_model.probabilistic_circuit.distributions import SymbolicDistribution, UniformDistribution
+
 from random_events.events import VariableMap
 from dash import dcc, html
 import plotly.graph_objects as go
@@ -11,7 +13,8 @@ import dash_bootstrap_components as dbc
 from typing import List
 import os
 import portion
-from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
+from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, DeterministicSumUnit, SmoothSumUnit, DecomposableProductUnit
+
 from random_events.variables import Continuous
 import numpy as np
 
@@ -870,7 +873,7 @@ def plot_3d(model: ProbabilisticCircuit):
 
     for node in graph_to_plot.nodes():
         x, y, z = node_positions[node]
-        for mark in node.marker_3d:
+        for mark in get_correct_3d_marker(node):
             fig.add_trace(go.Scatter3d(
                 x=[x],
                 y=[y],
@@ -888,4 +891,27 @@ def plot_3d(model: ProbabilisticCircuit):
         )
     )
 
+    fig["layout"].update(margin=dict(l=0, r=0, b=0, t=0))
+
+
     return fig
+
+def get_correct_3d_marker(node):
+    if isinstance(node, SymbolicDistribution):
+        return [dict(size=4, color='blue', opacity=0.5,  symbol='square')]
+    elif isinstance(node, SmoothSumUnit):
+        return [dict(size=6, color='blue', opacity=0.8, symbol='circle'),
+                     dict(size=4, color='azure', opacity=0.8, symbol='cross')]
+    elif isinstance(node, DeterministicSumUnit):
+        return [dict(size=6, color='blue', opacity=0.4, symbol='circle'),
+                     dict(size=4, color='blue', opacity=0.4, symbol='circle'),
+                     dict(size=4, color='azure', opacity=0.8, symbol='cross')]
+    elif isinstance(node, DecomposableProductUnit):
+        return [dict(size=6, color='blue', opacity=0.8, symbol='circle'),
+                     dict(size=4, color='azure', opacity=0.8, symbol='x')]
+    elif isinstance(node, UniformDistribution):
+        return [dict(size=4, color='blue', opacity=0.5, symbol='square')]
+    else:
+        raise ValueError("Unknown node type {}".format(type(node)))
+
+
