@@ -1,0 +1,13 @@
+random-events
+probabilistic-model
+igraph
+numpy
+plotly
+portion
+dash_bootstrap_components
+dash_daq
+watchdog
+scikit-learn
+pandas
+matplotlib
+pyjpt

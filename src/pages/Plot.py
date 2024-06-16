@@ -5,7 +5,7 @@ from dash import dcc, html, Input, Output, State, ctx, ALL, callback
 import components as c
 from typing import List
 from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
-import random_events.variables
+import random_events.variable
 
 
 dash.register_page(__name__)

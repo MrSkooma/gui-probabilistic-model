@@ -1,10 +1,12 @@
 import dash
-import random_events.variables
+import random_events.variable
 from dash import html, Input, Output, callback
 import components as c
 import dash_bootstrap_components as dbc
+from random_events.set import  Set
+from random_events.interval import Interval, SimpleInterval
 from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
-from random_events.events import Event
+from random_events.product_algebra import Event
 dash.register_page(__name__, path='/')
 
 
@@ -18,16 +20,16 @@ def gen_varnames(children):
         return var_divs
     for variable, distrubiton in c.prior.items():
         var_name = variable.name
-        if isinstance(variable, random_events.variables.Continuous):
-            dis_val_event = c.prior[variable].domain.events[0]
-            mini = dis_val_event[variable].lower
-            maxi = dis_val_event[variable].upper
-
+        dis_val_event = c.prior[variable].support().simple_sets[0][variable]
+        if isinstance(variable, random_events.variable.Continuous) or isinstance(variable, random_events.variable.Integer):
+            dis_val_event: Interval
+            mini = dis_val_event.simple_sets[0].lower
+            maxi = dis_val_event.simple_sets[-1].upper
             childStr = [html.Div(var_name, className="fs-4  flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(" ∈ ", className="pe-2 ps-1 fs-4  flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(f"[{round(mini,3)}, {round(maxi, 3)}]", className="fs-4  flex-nowrap flex-grow-0 text-nowrap text-start")]
             var_divs.append(html.Div(childStr, className="d-flex justify-content-center flex-grow-0"))
         else:
-            dis_val_event = c.prior[variable].domain.events[0]
-            vals = dis_val_event[variable]
+            dis_val_event: Set
+            vals = [v.name for v in dis_val_event.simple_sets]
             childStr = [html.Div(var_name, className="fs-4 flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(" ∈ ", className="pe-2 ps-1 fs-4 flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(f"({vals})", className="fs-4 flex-nowrap flex-grow-0 text-nowrap text-start")]
             var_divs.append(html.Div(childStr, className="d-flex justify-content-center flex-grow-0"))
     return var_divs

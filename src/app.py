@@ -4,7 +4,7 @@ import os.path
 
 import igraph
 import numpy as np
-import random_events.events
+
 from igraph import Graph, EdgeSeq
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
@@ -20,7 +20,7 @@ from probabilistic_model.utils import SubclassJSONSerializer as Serializer
 from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, ProbabilisticCircuitMixin
 import probabilistic_model.learning.jpt.jpt
 
-from random_events.events import VariableMap
+from random_events.product_algebra import VariableMap
 
 '''
 This is the main Programming where the Server will be started and the navigator are constructed.
@@ -97,14 +97,15 @@ def tree_update(upload):
             content_type, content_string = upload.split(',')
             decoded = base64.b64decode(content_string)
             content_decided_string = decoded.decode("utf-8")
+            json_tree = json.loads(content_decided_string)
+            #io_tree = probabilistic_model.probabilistic_circuit.probabilistic_circuit.ProbabilisticCircuit.from_json(json.loads(content_decided_string))
             io_tree = Serializer.from_json(json.loads(content_decided_string))
 
-            if isinstance(io_tree, ProbabilisticCircuit):
-                ...
-            elif isinstance(io_tree, ProbabilisticCircuitMixin):
+
+            if isinstance(io_tree, ProbabilisticCircuitMixin):
                 io_tree = io_tree.probabilistic_circuit
-            else:
-                raise ValueError(f"Type {type(io_tree)} not supported")
+            if not isinstance(io_tree, ProbabilisticCircuit):
+                raise TypeError(f"Type {type(io_tree)} not supported")
 
         except Exception as e:
             print(e)

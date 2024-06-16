@@ -1,13 +1,13 @@
 from typing import List
 
 from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
-import random_events.variables
+import random_events.variable
 import dash_bootstrap_components as dbc
 import dash
 from dash import dcc, html, Input, Output, State, ctx, ALL, callback
 import dash_daq as daq
 import components as c
-
+import random_events.product_algebra as pa
 """
     Most Probable Explanation GUI here can be chosen which Variabel to be consider (Default are all)
     Left kan chosen what be Given Information in the Moment. 
@@ -70,8 +70,9 @@ def layout_mpe():
                     dbc.Col(id="e_option_mpe", children=[
                         dbc.Button("👁️", id=dict(type='b_e_mpe', index=0), disabled=True, n_clicks=0,
                                    className="",
-                                   size="sm")], width=1, className="row row-cols-1 g-1 gy-2 align-items-center pe-3 ps-1 border-end border-secondary border-3 rounded-4"), #d-grid border-end border-secondary border-3 rounded-4#d-grid gx-1 d-md-flex align-self-center
-                ], className="row row-cols-6 g-1 gy-2 mb-3" #justify-content-md-center
+                                   size="sm", style={'width': '40px'})], width=1, className="row row-cols-1 g-1 gy-2 align-items-center pe-5 ps-3 border-end border-secondary border-3 rounded-4"),
+                    dbc.Col()
+                ], className="row row-cols-7 g-1 gy-2 mb-3" #justify-content-md-center
             ),
             dbc.Row(dbc.Button("=", id="erg_b_mpe", className="d-grid gap-2 col-6 mx-auto", n_clicks=0)), #d-grid gap-2 col-3 mt-3 mx-auto
             dbc.Row(
@@ -131,30 +132,31 @@ def evid_gen(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
                 c.create_prefix_text_mpe(4), q_var, modal_basic_mpe, False
 
         variable = c.vardict[dd_vals[cb.get("index")]]
-        if isinstance(variable, random_events.variables.Continuous):
-            minimum = c.prior[variable].domain.events[0][variable].lower
-            maximum = c.prior[variable].domain.events[0][variable].upper
-            e_in[cb.get("index")] = c.create_range_slider(minimum, maximum,
-                                                          id={'type': 'i_e_mpe', 'index': cb.get("index")}
-                                                          , dots=False,
-                                                          tooltip={"placement": "bottom", "always_visible": False})
-
-
-        elif isinstance(variable, random_events.variables.Symbolic):
-            e_in[cb.get("index")] = dcc.Dropdown(id={"type": "i_e_mpe", "index": cb.get("index")},
-                                                 options={k: v for k, v in zip(variable.domain,
-                                                                               variable.domain)},
-                                                 value=list(variable.domain),
-                                                 multi=True, )
-        elif isinstance(variable, random_events.variables.Integer):
-            lab = list(variable.domain)
-            mini = min(lab)
-            maxi = max(lab)
-            markings = dict(zip(lab, map(str, lab)))
-            e_in[cb.get("index")] = c.create_range_slider(minimum=mini - 1, maximum=maxi + 1, value=[mini, maxi],
-                                                          id={'type': 'i_e_que', 'index': cb.get("index")}, dots=False,
-                                                          marks=markings,
-                                                          tooltip={"placement": "bottom", "always_visible": False})
+        e_in[cb.get("index")] = c.correct_input_div(variable=variable, id={'type': 'i_e_mpe', 'index': cb.get("index")}, priors=c.prior)
+        # if isinstance(variable, random_events.variables.Continuous):
+        #     minimum = c.prior[variable].domain.events[0][variable].lower
+        #     maximum = c.prior[variable].domain.events[0][variable].upper
+        #     e_in[cb.get("index")] = c.create_range_slider(minimum, maximum,
+        #                                                   id={'type': 'i_e_mpe', 'index': cb.get("index")}
+        #                                                   , dots=False,
+        #                                                   tooltip={"placement": "bottom", "always_visible": False})
+        #
+        #
+        # elif isinstance(variable, random_events.variables.Symbolic):
+        #     e_in[cb.get("index")] = dcc.Dropdown(id={"type": "i_e_mpe", "index": cb.get("index")},
+        #                                          options={k: v for k, v in zip(variable.domain,
+        #                                                                        variable.domain)},
+        #                                          value=list(variable.domain),
+        #                                          multi=True, )
+        # elif isinstance(variable, random_events.variables.Integer):
+        #     lab = list(variable.domain)
+        #     mini = min(lab)
+        #     maxi = max(lab)
+        #     markings = dict(zip(lab, map(str, lab)))
+        #     e_in[cb.get("index")] = c.create_range_slider(minimum=mini - 1, maximum=maxi + 1, value=[mini, maxi],
+        #                                                   id={'type': 'i_e_que', 'index': cb.get("index")}, dots=False,
+        #                                                   marks=markings,
+        #                                                   tooltip={"placement": "bottom", "always_visible": False})
 
         if len(e_var) - 1 == cb.get("index"):
             return *c.add_selector_to_div_button(c.in_use_model, e_var, e_in, e_op, "e_mpe", cb.get("index") + 1), \
@@ -165,12 +167,12 @@ def evid_gen(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
         modal_var_index = cb.get("index")
         variable = c.vardict[dd_vals[cb.get("index")]]
         modal_body = List
-        if isinstance(variable, random_events.variables.Continuous):
+        if isinstance(variable, random_events.variable.Continuous):
             modal_body = c.generate_modal_option(model=c.in_use_model, var=e_var[cb.get("index")]['props']['value'],
                                                  value=[e_in[cb.get("index")]['props']['min'],
                                                         e_in[cb.get("index")]['props']['max']],
                                                  priors=c.prior, id="_mpe")
-        elif isinstance(variable, random_events.variables.Symbolic) or isinstance(variable, random_events.variables.Integer):
+        elif isinstance(variable, random_events.variable.Symbolic) or isinstance(variable, random_events.variable.Integer):
             modal_body = c.generate_modal_option(model=c.in_use_model, var=e_var[cb.get("index")]['props']['value'],
                                                  value=e_in[cb.get("index")]['props'].get('value'), priors=c.prior,
                                                  id="_mpe")
@@ -179,7 +181,7 @@ def evid_gen(dd_vals, b_e, op_s, e_var, e_in, q_var, e_op, op_i):
     elif cb.get("type") == "option_save_mpe":
         new_vals = List
         variable = c.vardict[dd_vals[cb.get("index")]]
-        if isinstance(variable, random_events.variables.Continuous) or isinstance(variable, random_events.variables.Integer):
+        if isinstance(variable, random_events.variable.Continuous) or isinstance(variable, random_events.variable.Integer):
             new_vals = c.fuse_overlapping_range(op_i)
         else:
             new_vals = op_i[0]  # is List of a List
@@ -211,7 +213,6 @@ def modal_router(op, op_i, m_bod, dd):
         return m_bod
     global modal_var_index
     var = dd[modal_var_index]
-    variable = c.vardict[var]
     if not isinstance(m_bod, list):
         m_in_new = [m_bod]
     else:
@@ -219,57 +220,59 @@ def modal_router(op, op_i, m_bod, dd):
     if cb == "op_add_mpe":
         index = m_in_new[-2]['props']['children'][0]['props']['children'][1]['props']['id']['index']
         type = m_in_new[1]['props']['children'][0]['props']['children'][1]['type']
-        if isinstance(variable, random_events.variables.Continuous):
-
-            mini = m_in_new[1]['props']['children'][0]['props']['children'][1]['props']['min']
-            maxi = m_in_new[1]['props']['children'][0]['props']['children'][1]['props']['max']
-            range_string = html.Div(f"Range {index + 2}",
-                                    style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
-            n_slider = c.create_range_slider(minimum=mini, maximum=maxi, id={'type': 'op_i_mpe', 'index': index + 1},
-                                             value=[mini, maxi], dots=False,
-                                             tooltip={"placement": "bottom", "always_visible": False},
-                                             className="flex-fill")
-            var_map = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
-            prob = c.in_use_model.probability(var_map)
-
-            prob_div = html.Div(f"{round(prob, 5)}",
-                                style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
-            m_in_new.insert(len(m_in_new) - 1, dbc.Row([
-                html.Div([range_string, n_slider, prob_div],
-                         id=f"modal_color_{(index + 1) % (len(c.color_list_modal) - 1)}",
-                         className="d-flex flex-nowrap justify-content-center ps-2")
-            ], className="d-flex justify-content-center"))
-            return m_in_new
-        elif isinstance(variable, random_events.variables.Integer):
-            lab = list(variable.domain[variable])
-            mini = min(lab)
-            maxi = max(lab)
-            markings = dict(zip(lab, map(str, lab)))
-            range_string = html.Div(f"Range {index + 2}",
-                                    style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal)-1)]))
-            n_slider = c.create_range_slider(minimum=mini, maximum=maxi, value=[mini, maxi]
-                                                          ,id={'type': 'op_i_mpe', 'index': index + 1}, dots=False,
-                                                          marks=markings,
-                                                          tooltip={"placement": "bottom", "always_visible": False},
-                                            className="flex-fill")
-            var_map = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
-            prob = c.in_use_model.probability(var_map)
-            prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal)-1)]))
-            m_in_new.insert(len(m_in_new) - 1, dbc.Row([
-                html.Div([range_string, n_slider, prob_div], id=f"modal_color_{(index + 1) % (len(c.color_list_modal)-1)}", className="d-flex flex-nowrap justify-content-center ps-2")
-            ],className="d-flex justify-content-center"))
-            return m_in_new
-        else:
-            # Sollte nicht Triggerbar sein, da bei DDMenu der +Buttone nicht Aktiv ist
-            return m_in_new
+        return c.modal_add_input(body=m_in_new, id_type='op_i_mpe', index=index,  var=var)
+        # if isinstance(variable, random_events.variables.Continuous):
+        #
+        #     mini = m_in_new[1]['props']['children'][0]['props']['children'][1]['props']['min']
+        #     maxi = m_in_new[1]['props']['children'][0]['props']['children'][1]['props']['max']
+        #     range_string = html.Div(f"Range {index + 2}",
+        #                             style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
+        #     n_slider = c.create_range_slider(minimum=mini, maximum=maxi, id={'type': 'op_i_mpe', 'index': index + 1},
+        #                                      value=[mini, maxi], dots=False,
+        #                                      tooltip={"placement": "bottom", "always_visible": False},
+        #                                      className="flex-fill")
+        #     var_event = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
+        #     prob = c.in_use_model.probability(var_event.as_composite_set())
+        #
+        #     prob_div = html.Div(f"{round(prob, 5)}",
+        #                         style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
+        #     m_in_new.insert(len(m_in_new) - 1, dbc.Row([
+        #         html.Div([range_string, n_slider, prob_div],
+        #                  id=f"modal_color_{(index + 1) % (len(c.color_list_modal) - 1)}",
+        #                  className="d-flex flex-nowrap justify-content-center ps-2")
+        #     ], className="d-flex justify-content-center"))
+        #     return m_in_new
+        # elif isinstance(variable, random_events.variables.Integer):
+        #     lab = list(variable.domain[variable])
+        #     mini = min(lab)
+        #     maxi = max(lab)
+        #     markings = dict(zip(lab, map(str, lab)))
+        #     range_string = html.Div(f"Range {index + 2}",
+        #                             style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal)-1)]))
+        #     n_slider = c.create_range_slider(minimum=mini, maximum=maxi, value=[mini, maxi]
+        #                                                   ,id={'type': 'op_i_mpe', 'index': index + 1}, dots=False,
+        #                                                   marks=markings,
+        #                                                   tooltip={"placement": "bottom", "always_visible": False},
+        #                                     className="flex-fill")
+        #     var_event = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
+        #     prob = c.in_use_model.probability(var_event.as_composite_set())
+        #     prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal)-1)]))
+        #     m_in_new.insert(len(m_in_new) - 1, dbc.Row([
+        #         html.Div([range_string, n_slider, prob_div], id=f"modal_color_{(index + 1) % (len(c.color_list_modal)-1)}", className="d-flex flex-nowrap justify-content-center ps-2")
+        #     ],className="d-flex justify-content-center"))
+        #     return m_in_new
+        # else:
+        #     # Sollte nicht Triggerbar sein, da bei DDMenu der +Buttone nicht Aktiv ist
+        #     return m_in_new
     else:  # if cb.get("type") == "op_i"
-        id = cb.get("index")
-        value = m_in_new[id + 1]['props']['children'][0]['props']['children'][1]['props']['value']
-        var_map = c.div_to_event(c.in_use_model, [var], [value])
-        prob = c.in_use_model.probability(var_map)
-        prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=c.color_list_modal[id % (len(c.color_list_modal) - 1)]))
-        m_in_new[id + 1]['props']['children'][0]['props']['children'][2] = prob_div
-        return m_in_new
+        index = cb.get("index")
+        return c.modal_save_input(body=m_in_new, index=index, var=var)
+        # value = m_in_new[id + 1]['props']['children'][0]['props']['children'][1]['props']['value']
+        # var_event = c.div_to_event(c.in_use_model, [var], [value])
+        # prob = c.in_use_model.probability(var_event.as_composite_set())
+        # prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=c.color_list_modal[id % (len(c.color_list_modal) - 1)]))
+        # m_in_new[id + 1]['props']['children'][0]['props']['children'][2] = prob_div
+        # return m_in_new
 
 
 @callback(
@@ -301,28 +304,30 @@ def erg_controller(n1, n2, n3, e_var, e_in):
     if cb == "b_erg_pre_mpe":
         page -= 1
         if page == 0:
-            return mpe(mode.events[page], likelihood), True, False
+            return mpe(mode.simple_sets[page], likelihood), True, False
         else:
-            return mpe(mode.events[page], likelihood), False, False
+            return mpe(mode.simple_sets[page], likelihood), False, False
     elif cb == "b_erg_next_mpe":
         page += 1
-        if len(mode.events) > page + 1:
-            return mpe(mode.events[page], likelihood), False, False
+        if len(mode.simple_sets) > page + 1:
+            return mpe(mode.simple_sets[page], likelihood), False, False
         else:
-            return mpe(mode.events[page], likelihood), False, True
+            return mpe(mode.simple_sets[page], likelihood), False, True
     else:
         page = 0
         evidence_dict = c.div_to_event(c.in_use_model, e_var, e_in)
+        evidence_dict: pa.SimpleEvent
         try:
-            conditional_model, evidence_probability = c.in_use_model.conditional(evidence_dict)
+            conditional_model, evidence_probability = c.in_use_model.conditional(evidence_dict.as_composite_set())
             mode, likelihood = conditional_model.mode()
+
         except Exception as e:
             print("Error was", type(e), e)
             return [html.Div("Unsatisfiable", className="fs-1 text text-center pt-3 ")], True, True
-        if len(mode.events) > 1:
-            return mpe(mode.events[0], likelihood), True, False
+        if len(mode.simple_sets) > 1:
+            return mpe(mode.simple_sets[0], likelihood), True, False
         else:
-            return mpe(mode.events[0], likelihood), True, True
+            return mpe(mode.simple_sets[0], likelihood), True, True
 
 
 def mpe(res, likelihood):

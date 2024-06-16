@@ -1,11 +1,10 @@
 import math
 
 import networkx as nx
-import random_events.variables
+import random_events.variable
 from jpt.base.functions import deque
 from probabilistic_model.probabilistic_circuit.distributions import SymbolicDistribution, UniformDistribution
 
-from random_events.events import VariableMap
 from dash import dcc, html
 import plotly.graph_objects as go
 
@@ -13,16 +12,16 @@ import dash_bootstrap_components as dbc
 from typing import List
 import os
 import portion
-from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, DeterministicSumUnit, SmoothSumUnit, DecomposableProductUnit
-
-from random_events.variables import Continuous
+from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, DeterministicSumUnit, \
+    SmoothSumUnit, DecomposableProductUnit
+import random_events.product_algebra as pa
 import numpy as np
 
 in_use_model: ProbabilisticCircuit
 in_use_model = ProbabilisticCircuit()  # need to be pm model fully
 vardict: dict
 vardict = dict()
-prior: random_events.events.VariableMap
+prior: pa.VariableMap
 prior = None
 
 color_list_modal = ["#ccff66", "MediumSeaGreen", "Tomato", "SlateBlue", "Violet"]
@@ -93,45 +92,48 @@ def gen_modal_option_id(id: str):
 
 
 # ---/MODAL-EYE---
-# --- MODAL-FUNC ---
-def correct_input_div(variable, value, priors, id, **kwargs):
+
+def correct_input_div(variable, priors, id, value=None, **kwargs):
     """
-        Generate a Dash Componant for the Varibael, that can be used in the zoom Modal
+        Generate a Dash Componant for the Varibael
     :param variable: The Variabel wich is being displayed
     :param value:  The Value of the Variable chosen from the User
-    :param vardic: the variabeln dic of the model vars.
+    :param priors: the variabeln dic of the model vars.
+    :param id: the id for dash to call it
     :param kwargs: further specifation for the Dash Componant
     :return: a Dash Componant that displays the variable
     """
-    if isinstance(variable, random_events.variables.Continuous):
-        minimum = priors[variable].domain.events[0][variable].lower
-        maximum = priors[variable].domain.events[0][variable].upper
-        rang = create_range_slider(minimum, maximum, id={'type': f'op_i{id}', 'index': 0}, value=value, dots=False,
+
+    prio = priors[variable].support().simple_sets[0][variable]
+    if isinstance(variable, random_events.variable.Continuous):
+        minimum = prio.simple_sets[0].lower
+        maximum = prio.simple_sets[-1].upper
+        value = value if value else [minimum, maximum]
+        rang = create_range_slider(minimum, maximum, id=id, value=value, dots=False,
                                    tooltip={"placement": "bottom", "always_visible": False}, **kwargs)
         return rang
-    elif isinstance(variable, random_events.variables.Symbolic):
-        return dcc.Dropdown(id={'type': f'op_i{id}', 'index': 0},
-                            options={k: v for k, v in
-                                     zip(priors[variable].domain[variable], priors[variable].domain[variable])},
+    elif isinstance(variable, random_events.variable.Symbolic):
+        value = value if value else []
+
+        return dcc.Dropdown(id=id,
+                            options={k.value: k.name for k in
+                                     prio.simple_sets},
                             value=value, multi=True, **kwargs)
-    elif isinstance(variable, random_events.variables.Integer):
-        lab = list(priors[variable].domain[variable])
+    elif isinstance(variable, random_events.variable.Integer):
+        lab = []
+        for seti in prio.simple_sets:
+            lab.extend(list(range(seti.lower, seti.upper + 1)))
         mini = min(lab)
         maxi = max(lab)
         markings = dict(zip(lab, map(str, lab)))
+        value = value if value else []
         return create_range_slider(minimum=mini, maximum=maxi, value=[mini, maxi],
-                                   id={'type': f'op_i{id}', 'index': 0}, dots=False,
+                                   id=id, dots=False,
                                    marks=markings,
                                    tooltip={"placement": "bottom", "always_visible": False}, **kwargs)
 
 
-# def generate_correct_plots(variable, var, result):
-#     if random_events.variables.Continuous == type(variable):
-#         return plot_numeric_to_div(var, result=result)
-#     elif random_events.variables.Symbolic == type(variable):
-#         return plot_symbolic_to_div(var, result=result)
-#     elif random_events.variables.Integer == type(variable):
-#         return plot_symbolic_to_div(var, result=result)
+# --- MODAL-FUNC ---
 
 def generate_plot_for_variable(variable, result):
     traces = result[variable].plot()
@@ -142,8 +144,6 @@ def generate_plot_for_variable(variable, result):
     #     fig.add_trace(trace)
 
     return html.Div([dcc.Graph(figure=fig), html.Div(className="pt-2")])
-
-
 
 
 def generate_modal_option(model: ProbabilisticCircuit, var: str, value: List[str or int or float], priors, id):
@@ -160,10 +160,12 @@ def generate_modal_option(model: ProbabilisticCircuit, var: str, value: List[str
     modal_layout.append(dbc.ModalHeader(dbc.ModalTitle(var)))
 
     variable = vardict[var]
-    result = calculate_posterior_distributions(random_events.events.Event(), in_use_model)
-    map = div_to_event(model, [var], [value])
-    probs = model.probability(map)
-    is_simbolic = False if isinstance(variable, random_events.variables.Continuous ) or isinstance(variable, random_events.variables.Integer) else True
+    result = calculate_posterior_distributions(pa.SimpleEvent(), in_use_model)
+    map = div_to_event(model, [var], [value])  #
+    map: pa.SimpleEvent
+    probs = model.probability(map.as_composite_set())
+    is_simbolic = False if isinstance(variable, random_events.variable.Continuous) or isinstance(variable,
+                                                                                                 random_events.variable.Integer) else True
     body = dbc.ModalBody(id=f"modal_input{id}", children=[
         dbc.Row([  # Grapicen
             dbc.Col([
@@ -173,8 +175,9 @@ def generate_modal_option(model: ProbabilisticCircuit, var: str, value: List[str
         dbc.Row(children=[
             html.Div([  # Inputs
                 html.Div("Range 1" if not is_simbolic else "Dropmenu", style=dict(color=color_list_modal[0])),
-                correct_input_div(variable, value, priors=priors, id=id, className="d-flex flex-fill"),
-                html.Div(f"{round(probs,5)}", style=dict(color=color_list_modal[0])),
+                correct_input_div(variable=variable, value=value, priors=priors, id={'type': f'op_i{id}', 'index': 0},
+                                  className="d-flex flex-fill"),
+                html.Div(f"{round(probs, 5)}", style=dict(color=color_list_modal[0])),
             ], id="modal_color_0", className="d-flex justify-content-evenly ps-2")
         ], className="d-flex justify-content-evenly"),
         dbc.Row([
@@ -192,6 +195,56 @@ def generate_modal_option(model: ProbabilisticCircuit, var: str, value: List[str
     modal_layout.append(foot)
     return modal_layout
 
+
+def modal_add_input(body, id_type, index, var):
+    variable = vardict[var]
+    new_body = body
+    if not isinstance(variable, random_events.variable.Continuous) \
+            and not isinstance(variable, random_events.variable.Integer):
+        return new_body
+    elif isinstance(variable, random_events.variable.Continuous):
+
+        mini = new_body[1]['props']['children'][0]['props']['children'][1]['props']['min']
+        maxi = new_body[1]['props']['children'][0]['props']['children'][1]['props']['max']
+        range_string = html.Div(f"Range {index + 2}",
+                                style=dict(color=color_list_modal[(index + 1) % (len(color_list_modal) - 1)]))
+        n_slider = create_range_slider(minimum=mini, maximum=maxi, id={'type': id_type, 'index': index + 1},
+                                       value=[mini, maxi], dots=False,
+                                       tooltip={"placement": "bottom", "always_visible": False},
+                                       className="flex-fill")
+
+    elif isinstance(variable, random_events.variable.Integer):
+        lab = list(variable.support()[variable])
+        mini = min(lab)
+        maxi = max(lab)
+        markings = dict(zip(lab, map(str, lab)))
+        range_string = html.Div(f"Range {index + 2}",
+                                style=dict(color=color_list_modal[(index + 1) % (len(color_list_modal) - 1)]))
+        n_slider = create_range_slider(minimum=mini, maximum=maxi, value=[mini, maxi]
+                                       , id={'type': id_type, 'index': index + 1}, dots=False,
+                                       marks=markings,
+                                       tooltip={"placement": "bottom", "always_visible": False},
+                                       className="flex-fill")
+    var_event = div_to_event(in_use_model, [variable.name], [[mini, maxi]])
+    prob = in_use_model.probability(var_event.as_composite_set())
+    prob_div = html.Div(f"{round(prob, 5)}",
+                        style=dict(color=color_list_modal[(index + 1) % (len(color_list_modal) - 1)]))
+    new_body.insert(len(new_body) - 1, dbc.Row([
+        html.Div([range_string, n_slider, prob_div],
+                 id=f"modal_color_{(index + 1) % (len(color_list_modal) - 1)}",
+                 className="d-flex flex-nowrap justify-content-center ps-2")
+    ], className="d-flex justify-content-center"))
+    return new_body
+
+
+def modal_save_input(body, index, var):
+    new_body = body
+    value = new_body[index + 1]['props']['children'][0]['props']['children'][1]['props']['value']
+    var_event = div_to_event(in_use_model, [var], [value])
+    prob = in_use_model.probability(var_event.as_composite_set())
+    prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=color_list_modal[index % (len(color_list_modal) - 1)]))
+    new_body[index + 1]['props']['children'][0]['props']['children'][2] = prob_div
+    return new_body
 
 # --- /MODAL_FUNC ---
 
@@ -215,7 +268,7 @@ def create_range_slider(minimum: float, maximum: float, *args, **kwargs) -> \
         minimum -= 1
         maximum += 1
     if "marks" not in kwargs:
-        steps = [x for x in np.arange(minimum, maximum, size/5)] + [maximum]
+        steps = [x for x in np.arange(minimum, maximum, size / 5)] + [maximum]
         kwargs["marks"] = {x: str(round(x, 2)) for x in steps}
 
     slider = dcc.RangeSlider(**kwargs, min=minimum, max=maximum, allowCross=False)
@@ -251,7 +304,7 @@ def value_getter_from_children(children: List[dict]):
 
 
 def div_to_variablemap(model: ProbabilisticCircuit, variables: List,
-                       constrains: List) -> random_events.events.VariableMap:
+                       constrains: List) -> pa.VariableMap:
     """
         Transforms variable and Constrains List form the GUI to a VariableMap
     :param model: the JPT model of the Prob. Tree
@@ -259,23 +312,24 @@ def div_to_variablemap(model: ProbabilisticCircuit, variables: List,
     :param constrains:  The list of for the Variables on the same Index
     :return: VariableMap of the Variables with its associated Constraints
     """
-    var_dict = random_events.events.VariableMap()
+    var_dict = pa.VariableMap()
     for variable, constrain in zip(variables, constrains):
         # IF Varaibel is Not Noe but Constrain is None Variabel DOmain Basic
         if variable is None or constrain is None:
             continue
-        if isinstance(vardict[variable], random_events.variables.Continuous):
-            var_dict[vardict[variable]] = portion.closed(constrain[0], constrain[1])
-        elif isinstance(vardict[variable], random_events.variables.Integer):
-            var_dict[vardict[variable]] = set([round(x) for x in constrain])
+        if isinstance(vardict[variable], random_events.variable.Continuous):
+            var_dict[vardict[variable]] = pa.SimpleInterval(constrain[0], constrain[1])
+        elif isinstance(vardict[variable], random_events.variable.Integer):
+            var_dict[vardict[variable]] = pa.Set([pa.SimpleInterval(round(x)) for x in constrain])
         else:
-            var_dict[vardict[variable]] = set(constrain)
+            var_dict[vardict[variable]] = pa.Set(*constrain)
 
     return var_dict
     # return jpt.variables.VariableMap([(model.varnames[k], v) for k, v in var_dict.items()])
+
 
 def div_to_event(model: ProbabilisticCircuit, variables: List,
-                       constrains: List) -> random_events.events.VariableMap:
+                 constrains: List) -> pa.SimpleEvent:
     """
         Transforms variable and Constrains List form the GUI to a VariableMap
     :param model: the JPT model of the Prob. Tree
@@ -283,23 +337,42 @@ def div_to_event(model: ProbabilisticCircuit, variables: List,
     :param constrains:  The list of for the Variables on the same Index
     :return: VariableMap of the Variables with its associated Constraints
     """
-    var_dict = random_events.events.Event()
+    var_dict = pa.SimpleEvent()
     for variable, constrain in zip(variables, constrains):
         # IF Varaibel is Not Noe but Constrain is None Variabel DOmain Basic
         if variable is None or constrain is None:
             continue
-        if isinstance(vardict[variable], random_events.variables.Continuous):
-            var_dict[vardict[variable]] = portion.closed(constrain[0], constrain[1])
-        elif isinstance(vardict[variable], random_events.variables.Integer):
-            var_dict[vardict[variable]] = set([round(x) for x in constrain])
+        if isinstance(vardict[variable], random_events.variable.Continuous):
+            var_dict[vardict[variable]] = pa.SimpleInterval(constrain[0], constrain[1])
+        elif isinstance(vardict[variable], random_events.variable.Integer):
+            var_dict[vardict[variable]] = pa.Set(*[pa.SimpleInterval(round(x)) for x in constrain])
         else:
-            var_dict[vardict[variable]] = set(constrain)
+            constrain_enums = symbolic_to_enum(variable, constrain)
+            #print(vardict[variable].domain_type()(0), str(vardict[variable].domain_type()(0)), type(vardict[variable].domain_type()(0)))
+            var_dict[vardict[variable]] = pa.Set(*constrain_enums)
 
     return var_dict
     # return jpt.variables.VariableMap([(model.varnames[k], v) for k, v in var_dict.items()])
 
 
-def mpe_result_to_div(model: ProbabilisticCircuit, res: random_events.events.VariableMap, likelihood: float) -> List:
+def symbolic_to_enum(variable: pa.Variable, values: List) -> List:
+    var_enum = vardict[variable].domain_type()
+    result = []
+    for value in values:
+        result.append(var_enum(int(value)))
+    return result
+
+def enum_to_symbolic(variable: pa.Variable, values: List):
+
+    var_enum = vardict[variable.name].domain_type()
+    result = []
+    for name, value in var_enum.__members__.items():
+        if value in values:
+            result.append(name)
+    return result
+
+
+def mpe_result_to_div(model: ProbabilisticCircuit, res: pa.SimpleEvent, likelihood: float) -> List:
     """
         Generate Visuel Dash Representation for result of the mpe jpt func
     :param res: one of the Results from mpe func
@@ -309,40 +382,47 @@ def mpe_result_to_div(model: ProbabilisticCircuit, res: random_events.events.Var
     return_div = []
 
     for variable, restriction in res.items():
-        if isinstance(variable, random_events.variables.Integer):
+        prio = prior[variable].support().simple_sets[0][variable]
+        if isinstance(variable, random_events.variable.Integer):
+            continue
             value = [x for i in range(0, len(restriction)) for x in (i, i)]
-            lab = list(variable.domain.labels.values())
+            lab = list(variable.support().labels.values())
             mini = min(lab)
             maxi = max(lab)
             markings = dict(zip(lab, map(str, lab)))
             return_div += [html.Div(
-                [dcc.Dropdown(options=[variable.name], value=variable.name, disabled=True, className="margin10"),
+                [dcc.Dropdown(options=[variable.name], value=[variable.name], disabled=True, className="margin10"),
                  create_range_slider(minimum=mini - 1, maximum=maxi + 1, value=value, disabled=True, marks=markings,
                                      dots=False,
                                      className="margin10")]
                 , style={"display": "grid", "grid-template-columns": "30% 70%"})]
 
-        if isinstance(variable, random_events.variables.Continuous):
-            value=[]
-            if portion == type(res[variable]):
-                for interval in res[variable].intervals:
-                    value += [interval.lower, interval.upper]
-            else:
-                value += [res[variable].lower, res[variable].upper]
+        if isinstance(variable, random_events.variable.Continuous):
+            restriction: pa.Interval
+            value = restriction.simple_sets[0]#should alway be 1
+            # if portion == type(res[variable]):
+            #     for interval in res[variable].intervals:
+            #         value += [interval.lower, interval.upper]
+            # else:
+            #     value += [res[variable].lower, res[variable].upper]
             #Assume always range values in a list data type
-            minimum = prior[variable].domain.events[0][variable].lower
-            maximum = prior[variable].domain.events[0][variable].upper
+            minimum = prio.simple_sets[0].lower
+            maximum = prio.simple_sets[-1].upper
+            value = [value.lower, value.upper]
             return_div += [html.Div(
                 [dcc.Dropdown(options=[variable.name], value=variable.name, disabled=True, className="margin10"),
                  create_range_slider(minimum, maximum, value=value, disabled=True, className="margin10",
                                      tooltip={"placement": "bottom", "always_visible": True})]
                 , style={"display": "grid", "grid-template-columns": "30% 70%"})]
-        elif isinstance(variable, random_events.variables.Symbolic):
+
+        elif isinstance(variable, random_events.variable.Symbolic):
+            restriction_list = [a for a in restriction.simple_sets]
+            res = enum_to_symbolic(variable, restriction_list)
             return_div += [html.Div(
                 [dcc.Dropdown(options=[variable.name], value=variable.name, disabled=True),
                  dcc.Dropdown(
-                     options=list(restriction),
-                     value=list(restriction), multi=True, disabled=True, className="ps-3")],
+                     options=res,
+                     value=res, multi=True, disabled=True, className="ps-3")],
                 style={"display": "grid", "grid-template-columns": "30% 70%"})]
         return_div += [html.Div(className="pt-1")]
 
@@ -350,6 +430,7 @@ def mpe_result_to_div(model: ProbabilisticCircuit, res: random_events.events.Var
                                          className="margin10"),
                             dcc.Dropdown(options=[likelihood], value=likelihood, disabled=True, className="ps-3 pb-2")],
                            id="likelihood", style={"display": "grid", "grid-template-columns": "30% 70%"})] + return_div
+
     return return_div
 
 
@@ -812,17 +893,16 @@ def get_default_dic_pos():
 # ---- PM NEW STUFF -----
 
 def create_prior_distributions(model: ProbabilisticCircuit):
-    prior_distributions = VariableMap()
+    prior_distributions = pa.VariableMap()
     for variable in model.variables:
         prior_distributions[variable] = model.marginal([variable])
     return prior_distributions
 
 
+def calculate_posterior_distributions(evidence: pa.SimpleEvent, model: ProbabilisticCircuit):
+    posterior_distributions = pa.VariableMap()
 
-def calculate_posterior_distributions(evidence: random_events.events.Event, model: ProbabilisticCircuit):
-    posterior_distributions = VariableMap()
-
-    conditional_model, evidence_probability = model.conditional(evidence)
+    conditional_model, evidence_probability = model.conditional(evidence.as_composite_set())
 
     for variable in conditional_model.variables:
         posterior_distributions[variable] = conditional_model.marginal([variable])
@@ -831,9 +911,6 @@ def calculate_posterior_distributions(evidence: random_events.events.Event, mode
 
 
 def plot_3d(model: ProbabilisticCircuit):
-    import plotly.graph_objects as go
-
-
     graph_to_plot = nx.DiGraph()
 
     nodes_to_plot_queue = deque([model.root])
@@ -893,25 +970,23 @@ def plot_3d(model: ProbabilisticCircuit):
 
     fig["layout"].update(margin=dict(l=0, r=0, b=0, t=0))
 
-
     return fig
+
 
 def get_correct_3d_marker(node):
     if isinstance(node, SymbolicDistribution):
-        return [dict(size=4, color='blue', opacity=0.5,  symbol='square')]
+        return [dict(size=4, color='blue', opacity=0.5, symbol='square')]
     elif isinstance(node, SmoothSumUnit):
         return [dict(size=6, color='blue', opacity=0.8, symbol='circle'),
-                     dict(size=4, color='azure', opacity=0.8, symbol='cross')]
+                dict(size=4, color='azure', opacity=0.8, symbol='cross')]
     elif isinstance(node, DeterministicSumUnit):
         return [dict(size=6, color='blue', opacity=0.4, symbol='circle'),
-                     dict(size=4, color='blue', opacity=0.4, symbol='circle'),
-                     dict(size=4, color='azure', opacity=0.8, symbol='cross')]
+                dict(size=4, color='blue', opacity=0.4, symbol='circle'),
+                dict(size=4, color='azure', opacity=0.8, symbol='cross')]
     elif isinstance(node, DecomposableProductUnit):
         return [dict(size=6, color='blue', opacity=0.8, symbol='circle'),
-                     dict(size=4, color='azure', opacity=0.8, symbol='x')]
+                dict(size=4, color='azure', opacity=0.8, symbol='x')]
     elif isinstance(node, UniformDistribution):
         return [dict(size=4, color='blue', opacity=0.5, symbol='square')]
     else:
         raise ValueError("Unknown node type {}".format(type(node)))
-
-
