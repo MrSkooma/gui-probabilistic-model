@@ -2,7 +2,7 @@ import math
 
 import networkx as nx
 import random_events.variable
-from jpt.base.functions import deque
+from collections import deque
 #from probabilistic_model.probabilistic_circuit.distributions import SymbolicDistribution, UniformDistribution
 
 from dash import dcc, html
@@ -13,7 +13,7 @@ from typing import List
 import os
 import portion
 from probabilistic_model.distributions import SymbolicDistribution, UniformDistribution
-from probabilistic_model.probabilistic_circuit.nx.distributions import UnivariateDiscreteLeaf
+from probabilistic_model.probabilistic_circuit.nx.probabilistic_circuit import UnivariateDiscreteLeaf, LeafUnit
 from probabilistic_model.probabilistic_circuit.nx.probabilistic_circuit import ProbabilisticCircuit, SumUnit, \
     ProductUnit
 #from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, DeterministicSumUnit, \
@@ -118,9 +118,8 @@ def correct_input_div(variable, priors, id, value=None, **kwargs):
         return rang
     elif isinstance(variable, random_events.variable.Symbolic):
         value = value if value else []
-
         return dcc.Dropdown(id=id,
-                            options={k.value: k.name for k in
+                            options={k.element: k.element for k in
                                      prio.simple_sets},
                             value=value, multi=True, **kwargs)
     elif isinstance(variable, random_events.variable.Integer):
@@ -136,6 +135,7 @@ def correct_input_div(variable, priors, id, value=None, **kwargs):
                                    id=id, dots=False,
                                    marks=markings,
                                    tooltip={"placement": "bottom", "always_visible": False}, **kwargs)
+    return None
 
 
 # --- MODAL-FUNC ---
@@ -368,19 +368,28 @@ def div_to_event(model: ProbabilisticCircuit, variables: List,
 
 
 def symbolic_to_enum(variable: pa.Variable, values: List) -> List:
-    var_enum = vardict[variable].domain_type()
+    var_domain = vardict[variable].domain
     result = []
-    for value in values:
-        result.append(var_enum(int(value)))
+    values = [values] if not isinstance(values, list) else values
+    for ele in var_domain.simple_sets:
+        if ele.element in values:
+            result.append(ele)
+    # for value in values:
+    #     result.append(var_domain[value])
     return result
 
 def enum_to_symbolic(variable: pa.Variable, values: List):
-
-    var_enum = vardict[variable.name].domain_type()
+    # var_enum = vardict[variable.name].domain_type()
+    # result = []
+    # for name, value in var_enum.__members__.items():
+    #     if value in values:
+    #         result.append(name)
+    var_domain = variable.domain
     result = []
-    for name, value in var_enum.__members__.items():
-        if value in values:
-            result.append(name)
+    values = [values] if not isinstance(values, list) else values
+    for ele in var_domain.simple_sets:
+        if ele in values:
+            result.append(ele.element)
     return result
 
 
@@ -998,7 +1007,7 @@ def get_correct_3d_marker(node):
     elif isinstance(node, ProductUnit):
         return [dict(size=6, color='blue', opacity=0.8, symbol='circle'),
                 dict(size=4, color='azure', opacity=0.8, symbol='x')]
-    elif isinstance(node, UniformDistribution):
+    elif isinstance(node, LeafUnit):
         return [dict(size=4, color='blue', opacity=0.5, symbol='square')]
     else:
         raise ValueError("Unknown node type {}".format(type(node)))

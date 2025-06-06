@@ -21,7 +21,7 @@ from typing import List
 import sys, getopt
 # from probabilistic_model.utils import SubclassJSONSerializer as Serializer
 # from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, ProbabilisticCircuitMixin
-import probabilistic_model.learning.jpt.jpt
+#import probabilistic_model.learning.jpt.jpt
 
 from random_events.product_algebra import VariableMap
 

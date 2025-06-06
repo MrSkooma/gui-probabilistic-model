@@ -29,7 +29,7 @@ def gen_varnames(children):
             var_divs.append(html.Div(childStr, className="d-flex justify-content-center flex-grow-0"))
         else:
             dis_val_event: Set
-            vals = [v.name for v in dis_val_event.simple_sets]
+            vals = [v.element for v in dis_val_event.simple_sets]
             childStr = [html.Div(var_name, className="fs-4 flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(" ∈ ", className="pe-2 ps-1 fs-4 flex-nowrap flex-grow-0 text-nowrap text-start"), html.Div(f"({vals})", className="fs-4 flex-nowrap flex-grow-0 text-nowrap text-start")]
             var_divs.append(html.Div(childStr, className="d-flex justify-content-center flex-grow-0"))
     return var_divs
