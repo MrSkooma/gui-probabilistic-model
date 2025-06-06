@@ -3,7 +3,7 @@ import math
 import networkx as nx
 import random_events.variable
 from jpt.base.functions import deque
-from probabilistic_model.probabilistic_circuit.distributions import SymbolicDistribution, UniformDistribution
+#from probabilistic_model.probabilistic_circuit.distributions import SymbolicDistribution, UniformDistribution
 
 from dash import dcc, html
 import plotly.graph_objects as go
@@ -12,10 +12,15 @@ import dash_bootstrap_components as dbc
 from typing import List
 import os
 import portion
-from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, DeterministicSumUnit, \
-    SmoothSumUnit, DecomposableProductUnit
+from probabilistic_model.distributions import SymbolicDistribution, UniformDistribution
+from probabilistic_model.probabilistic_circuit.nx.distributions import UnivariateDiscreteLeaf
+from probabilistic_model.probabilistic_circuit.nx.probabilistic_circuit import ProbabilisticCircuit, SumUnit, \
+    ProductUnit
+#from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, DeterministicSumUnit, \
+    #SmoothSumUnit, DecomposableProductUnit
 import random_events.product_algebra as pa
 import numpy as np
+from random_events.interval import Bound
 
 in_use_model: ProbabilisticCircuit
 in_use_model = ProbabilisticCircuit()  # need to be pm model fully
@@ -103,8 +108,7 @@ def correct_input_div(variable, priors, id, value=None, **kwargs):
     :param kwargs: further specifation for the Dash Componant
     :return: a Dash Componant that displays the variable
     """
-
-    prio = priors[variable].support().simple_sets[0][variable]
+    prio = priors[variable].support.simple_sets[0][variable]
     if isinstance(variable, random_events.variable.Continuous):
         minimum = prio.simple_sets[0].lower
         maximum = prio.simple_sets[-1].upper
@@ -122,7 +126,8 @@ def correct_input_div(variable, priors, id, value=None, **kwargs):
     elif isinstance(variable, random_events.variable.Integer):
         lab = []
         for seti in prio.simple_sets:
-            lab.extend(list(range(seti.lower, seti.upper + 1)))
+
+            lab.extend(list(range(int(seti.lower), int(seti.upper +1))))
         mini = min(lab)
         maxi = max(lab)
         markings = dict(zip(lab, map(str, lab)))
@@ -214,7 +219,7 @@ def modal_add_input(body, id_type, index, var):
                                        className="flex-fill")
 
     elif isinstance(variable, random_events.variable.Integer):
-        lab = list(variable.support()[variable])
+        lab = list(variable.support[variable])
         mini = min(lab)
         maxi = max(lab)
         markings = dict(zip(lab, map(str, lab)))
@@ -339,13 +344,20 @@ def div_to_event(model: ProbabilisticCircuit, variables: List,
     """
     var_dict = pa.SimpleEvent()
     for variable, constrain in zip(variables, constrains):
+        print(variable, constrain)
         # IF Varaibel is Not Noe but Constrain is None Variabel DOmain Basic
         if variable is None or constrain is None:
             continue
         if isinstance(vardict[variable], random_events.variable.Continuous):
             var_dict[vardict[variable]] = pa.SimpleInterval(constrain[0], constrain[1])
         elif isinstance(vardict[variable], random_events.variable.Integer):
-            var_dict[vardict[variable]] = pa.Set(*[pa.SimpleInterval(round(x)) for x in constrain])
+            round_con = [round(x) for x in constrain]
+            if len(round_con) ==1 or round_con[0] == round_con[1]:
+                var_dict[vardict[variable]] = random_events.interval.singleton(round_con[0])
+            else:
+                # union = random_events.interval.singleton(round_con[0]).union_with(random_events.interval.singleton(round_con[1]))
+                # var_dict[vardict[variable]] = union
+                var_dict[vardict[variable]] = pa.SimpleInterval(constrain[0], constrain[1], Bound.CLOSED, Bound.CLOSED)
         else:
             constrain_enums = symbolic_to_enum(variable, constrain)
             #print(vardict[variable].domain_type()(0), str(vardict[variable].domain_type()(0)), type(vardict[variable].domain_type()(0)))
@@ -382,11 +394,11 @@ def mpe_result_to_div(model: ProbabilisticCircuit, res: pa.SimpleEvent, likeliho
     return_div = []
 
     for variable, restriction in res.items():
-        prio = prior[variable].support().simple_sets[0][variable]
+        prio = prior[variable].support.simple_sets[0][variable]
         if isinstance(variable, random_events.variable.Integer):
             continue
             value = [x for i in range(0, len(restriction)) for x in (i, i)]
-            lab = list(variable.support().labels.values())
+            lab = list(variable.support.labels.values())
             mini = min(lab)
             maxi = max(lab)
             markings = dict(zip(lab, map(str, lab)))
@@ -974,16 +986,16 @@ def plot_3d(model: ProbabilisticCircuit):
 
 
 def get_correct_3d_marker(node):
-    if isinstance(node, SymbolicDistribution):
+    if isinstance(node, SymbolicDistribution) or isinstance(node,UnivariateDiscreteLeaf):
         return [dict(size=4, color='blue', opacity=0.5, symbol='square')]
-    elif isinstance(node, SmoothSumUnit):
+    elif isinstance(node, SumUnit):
         return [dict(size=6, color='blue', opacity=0.8, symbol='circle'),
                 dict(size=4, color='azure', opacity=0.8, symbol='cross')]
-    elif isinstance(node, DeterministicSumUnit):
-        return [dict(size=6, color='blue', opacity=0.4, symbol='circle'),
-                dict(size=4, color='blue', opacity=0.4, symbol='circle'),
-                dict(size=4, color='azure', opacity=0.8, symbol='cross')]
-    elif isinstance(node, DecomposableProductUnit):
+    # elif isinstance(node, DeterministicSumUnit):
+    #     return [dict(size=6, color='blue', opacity=0.4, symbol='circle'),
+    #             dict(size=4, color='blue', opacity=0.4, symbol='circle'),
+    #             dict(size=4, color='azure', opacity=0.8, symbol='cross')]
+    elif isinstance(node, ProductUnit):
         return [dict(size=6, color='blue', opacity=0.8, symbol='circle'),
                 dict(size=4, color='azure', opacity=0.8, symbol='x')]
     elif isinstance(node, UniformDistribution):

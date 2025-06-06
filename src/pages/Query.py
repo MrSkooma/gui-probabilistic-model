@@ -5,7 +5,7 @@ import random_events.variable
 from dash import dcc, html, Input, Output, State, ctx, ALL, callback
 import components as c
 from typing import List
-from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
+from probabilistic_model.probabilistic_circuit.nx.probabilistic_circuit import ProbabilisticCircuit
 
 import random_events
 import random_events.product_algebra as pa
@@ -296,7 +296,9 @@ def query_router(b_erg, q_dd, e_dd, b_q, b_e, op_s, q_var, q_in, e_var, e_in, q_
                                                  value=q_in[cb.get("index")]['props'].get('value'), priors=c.prior,
                                                  id="_que")
         elif isinstance(variable, random_events.variable.Integer):
-            lab = list(variable.domain[variable])
+            lab = []
+            for seti in c.prior[variable].support.simple_sets[0][variable]:
+                lab.extend(list(range(int(seti.lower), int(seti.upper + 1))))
             mini = min(lab)
             maxi = max(lab)
             markings = dict(zip(lab, map(str, lab)))
@@ -315,6 +317,8 @@ def query_router(b_erg, q_dd, e_dd, b_q, b_e, op_s, q_var, q_in, e_var, e_in, q_
         else:
             new_vals = op_i[0]  # is List of a List
         if modal_type == 1:
+            # print("-"*40)
+            # print(e_in)
             e_in[modal_var_index]['props']['value'] = new_vals
             e_in[modal_var_index]['props']['drag_value'] = new_vals
             return q_var, q_in, q_op, e_var, e_in, e_op, \
@@ -422,7 +426,7 @@ def modal_router(op, op_i, m_bod, dd_e, dd_q):
 
 def infer(q_var, q_in, e_var, e_in):
     """
-        Calculates withe pm the Probilty of query and evidence
+        Calculates with pm the Probilty of query and evidence
     :param q_var: Div of the Query Variable
     :param q_in: Div or the Input of Query
     :param e_var: Div of the Evidence Variable
@@ -435,15 +439,15 @@ def infer(q_var, q_in, e_var, e_in):
 
     query = c.div_to_event(c.in_use_model, q_var, q_in)
     evidence = c.div_to_event(c.in_use_model, e_var, e_in)
-    t = c.in_use_model
-
+    print(query)
+    print(evidence, "-"*20)
 
     try:
-
         c.in_use_model: ProbabilisticCircuit
         conditional_model, p_e = c.in_use_model.conditional(evidence.as_composite_set())
         p_q = conditional_model.probability(query.as_composite_set())
     except Exception as e:
+        print(e)
         return "Unsatasfiable"
     return f"P(Q|E) = {round(p_e, 2) * round(p_q, 2)*100}% / {round(p_e * 100, 2)}% = {round(p_q * 100, 2)}%"
 r"""

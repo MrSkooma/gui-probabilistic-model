@@ -5,7 +5,7 @@ import components as c
 import dash_bootstrap_components as dbc
 from random_events.set import  Set
 from random_events.interval import Interval, SimpleInterval
-from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
+
 from random_events.product_algebra import Event
 dash.register_page(__name__, path='/')
 
@@ -20,7 +20,7 @@ def gen_varnames(children):
         return var_divs
     for variable, distrubiton in c.prior.items():
         var_name = variable.name
-        dis_val_event = c.prior[variable].support().simple_sets[0][variable]
+        dis_val_event = c.prior[variable].support.simple_sets[0][variable]
         if isinstance(variable, random_events.variable.Continuous) or isinstance(variable, random_events.variable.Integer):
             dis_val_event: Interval
             mini = dis_val_event.simple_sets[0].lower

@@ -4,7 +4,7 @@ import dash
 from dash import dcc, html, Input, Output, State, ctx, ALL, callback
 import components as c
 from typing import List
-from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
+from probabilistic_model.probabilistic_circuit.nx.probabilistic_circuit import ProbabilisticCircuit
 import random_events.variable
 
 global result

@@ -1,6 +1,6 @@
 from typing import List
 
-from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit
+
 import random_events.variable
 import dash_bootstrap_components as dbc
 import dash

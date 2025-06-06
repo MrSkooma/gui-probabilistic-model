@@ -13,11 +13,14 @@ import dash
 from dash import dcc, html, Input, Output, State, ctx, MATCH, ALLSMALLER, ALL
 import math
 import json
+
+from probabilistic_model.probabilistic_circuit.nx.probabilistic_circuit import ProbabilisticCircuit
+
 import components as c
 from typing import List
 import sys, getopt
-from probabilistic_model.utils import SubclassJSONSerializer as Serializer
-from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, ProbabilisticCircuitMixin
+# from probabilistic_model.utils import SubclassJSONSerializer as Serializer
+# from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, ProbabilisticCircuitMixin
 import probabilistic_model.learning.jpt.jpt
 
 from random_events.product_algebra import VariableMap
@@ -97,13 +100,10 @@ def tree_update(upload):
             content_type, content_string = upload.split(',')
             decoded = base64.b64decode(content_string)
             content_decided_string = decoded.decode("utf-8")
-            json_tree = json.loads(content_decided_string)
+            io_tree = json.loads(content_decided_string)
             #io_tree = probabilistic_model.probabilistic_circuit.probabilistic_circuit.ProbabilisticCircuit.from_json(json.loads(content_decided_string))
-            io_tree = Serializer.from_json(json.loads(content_decided_string))
+            io_tree = ProbabilisticCircuit.from_json(json.loads(content_decided_string))
 
-
-            if isinstance(io_tree, ProbabilisticCircuitMixin):
-                io_tree = io_tree.probabilistic_circuit
             if not isinstance(io_tree, ProbabilisticCircuit):
                 raise TypeError(f"Type {type(io_tree)} not supported")
 
@@ -125,12 +125,8 @@ if __name__ == '__main__':
         try:
             tree = open(pre_tree, "rb")
             tree_data = tree.read()
-            io_tree = Serializer.from_json(json.loads(tree_data))
-            if isinstance(io_tree, ProbabilisticCircuit):
-                ...
-            elif isinstance(io_tree, ProbabilisticCircuitMixin):
-                io_tree = io_tree.probabilistic_circuit
-            else:
+            io_tree = ProbabilisticCircuit.from_json(json.loads(tree_data))
+            if not isinstance(io_tree, ProbabilisticCircuit):
                 raise ValueError(f"Type {type(io_tree)} not supported")
 
             c.in_use_model = io_tree
