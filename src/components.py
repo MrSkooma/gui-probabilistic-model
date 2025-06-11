@@ -923,7 +923,7 @@ def create_prior_distributions(model: ProbabilisticCircuit):
 def calculate_posterior_distributions(evidence: pa.SimpleEvent, model: ProbabilisticCircuit):
     posterior_distributions = pa.VariableMap()
 
-    conditional_model, evidence_probability = model.conditional(evidence.as_composite_set())
+    conditional_model, evidence_probability = model.truncated(evidence.as_composite_set())
 
     for variable in conditional_model.variables:
         posterior_distributions[variable] = conditional_model.marginal([variable])

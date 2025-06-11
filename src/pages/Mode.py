@@ -318,7 +318,7 @@ def erg_controller(n1, n2, n3, e_var, e_in):
         evidence_dict = c.div_to_event(c.in_use_model, e_var, e_in)
         evidence_dict: pa.SimpleEvent
         try:
-            conditional_model, evidence_probability = c.in_use_model.conditional(evidence_dict.as_composite_set())
+            conditional_model, evidence_probability = c.in_use_model.truncated(evidence_dict.as_composite_set())
             mode, likelihood = conditional_model.mode()
 
         except Exception as e:

@@ -367,61 +367,9 @@ def modal_router(op, op_i, m_bod, dd_e, dd_q):
         index = m_in_new[-2]['props']['children'][0]['props']['children'][1]['props']['id']['index']
         # var_type = m_in_new[1]['props']['children'][0]['props']['children'][1]['type']
         return c.modal_add_input(body=m_in_new, id_type='op_i_que', index=index, var=var)
-        # if isinstance(variable, random_events.variable.Continuous):
-        #
-        #     mini = m_in_new[1]['props']['children'][0]['props']['children'][1]['props']['min']
-        #     maxi = m_in_new[1]['props']['children'][0]['props']['children'][1]['props']['max']
-        #     range_string = html.Div(f"Range {index + 2}",
-        #                             style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
-        #     n_slider = c.create_range_slider(minimum=mini, maximum=maxi, id={'type': 'op_i_que', 'index': index + 1},
-        #                                      value=[mini, maxi], dots=False,
-        #                                      tooltip={"placement": "bottom", "always_visible": False},
-        #                                      className="flex-fill")
-        #     var_event = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
-        #     prob = c.in_use_model.probability(var_event.as_composite_set())
-        #     prob_div = html.Div(f"{round(prob,5)}",
-        #                         style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
-        #     m_in_new.insert(len(m_in_new) - 1, dbc.Row([
-        #         html.Div([range_string, n_slider, prob_div],
-        #                  id=f"modal_color_{(index + 1) % (len(c.color_list_modal)-1)}",
-        #                  className="d-flex flex-nowrap justify-content-center ps-2")
-        #     ], className="d-flex justify-content-center"))
-        #     return m_in_new
-        # elif isinstance(variable, random_events.variable.Integer):
-        #     lab = list(variable.domain[variable])
-        #     mini = min(lab)
-        #     maxi = max(lab)
-        #     markings = dict(zip(lab, map(str, lab)))
-        #     range_string = html.Div(f"Range {index + 2}",
-        #                             style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
-        #     n_slider = c.create_range_slider(minimum=mini, maximum=maxi, value=[mini, maxi]
-        #                                      , id={'type': 'op_i_que', 'index': index + 1}, dots=False,
-        #                                      marks=markings,
-        #                                      tooltip={"placement": "bottom", "always_visible": False},
-        #                                      className="flex-fill")
-        #     var_map = c.div_to_event(c.in_use_model, [var], [[mini, maxi]])
-        #     prob = c.in_use_model.probability(var_map)
-        #     prob_div = html.Div(f"{round(prob, 5)}",
-        #                         style=dict(color=c.color_list_modal[(index + 1) % (len(c.color_list_modal) - 1)]))
-        #     m_in_new.insert(len(m_in_new) - 1, dbc.Row([
-        #         html.Div([range_string, n_slider, prob_div],
-        #                  id=f"modal_color_{(index + 1) % (len(c.color_list_modal) - 1)}",
-        #                  className="d-flex flex-nowrap justify-content-center ps-2")
-        #     ], className="d-flex justify-content-center"))
-        #     return m_in_new
-        # else:
-        #     # Sollte nicht Triggerbar sein, da bei DDMenu der +Buttone nicht Aktiv ist
-        #     return m_in_new
     else:  # if cb.get("type") == "op_i"
         index = cb.get("index")
         return c.modal_save_input(body=m_in_new, index=index, var=var)
-        # id = cb.get("index")
-        # value = m_in_new[id + 1]['props']['children'][0]['props']['children'][1]['props']['value']
-        # var_map = c.div_to_event(c.in_use_model, [var], [value])
-        # prob = c.in_use_model.probability(var_map)
-        # prob_div = html.Div(f"{round(prob, 5)}", style=dict(color=c.color_list_modal[id % (len(c.color_list_modal) - 1)]))
-        # m_in_new[id + 1]['props']['children'][0]['props']['children'][2] = prob_div
-        # return m_in_new
 
 
 def infer(q_var, q_in, e_var, e_in):
@@ -444,7 +392,7 @@ def infer(q_var, q_in, e_var, e_in):
 
     try:
         c.in_use_model: ProbabilisticCircuit
-        conditional_model, p_e = c.in_use_model.conditional(evidence.as_composite_set())
+        conditional_model, p_e = c.in_use_model.truncated(evidence.as_composite_set())
         p_q = conditional_model.probability(query.as_composite_set())
     except Exception as e:
         print(e)
