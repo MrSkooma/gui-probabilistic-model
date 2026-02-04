@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jpt-gui"
+version = "0.1.0"
+requires-python = ">=3.10,<3.13"
+description = "GUI for visualizing and interacting with JPT probabilistic models"
+readme = "README.md"
+
+dependencies = [
+    "igraph",
+    "numpy",
+    "plotly",
+    "portion",
+    "dash_bootstrap_components",
+    "dash_daq",
+    "watchdog",
+    "scikit-learn",
+    "pandas",
+    "matplotlib",
+    "dash",
+]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+pycram-robotics = { path = "../cognitive_robot_abstract_machine/pycram", develop = true }
+probabilistic_model = { path = "../cognitive_robot_abstract_machine/probabilistic_model", develop = true }
+random_events = { path = "../cognitive_robot_abstract_machine/random_events", develop = true }
+igraph = "*"
+numpy = "*"
+plotly = "*"
+portion = "*"
+dash_bootstrap_components = "*"
+dash_daq = "*"
+watchdog = "*"
+scikit-learn = "*"
+pandas = "*"
+matplotlib = "*"
+dash = "*"
+
+[tool.setuptools]
+packages = []
+

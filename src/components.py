@@ -13,8 +13,8 @@ from typing import List
 import os
 import portion
 from probabilistic_model.distributions import SymbolicDistribution, UniformDistribution
-from probabilistic_model.probabilistic_circuit.nx.probabilistic_circuit import UnivariateDiscreteLeaf, LeafUnit
-from probabilistic_model.probabilistic_circuit.nx.probabilistic_circuit import ProbabilisticCircuit, SumUnit, \
+from probabilistic_model.probabilistic_circuit.rx.probabilistic_circuit import UnivariateDiscreteLeaf, LeafUnit
+from probabilistic_model.probabilistic_circuit.rx.probabilistic_circuit import ProbabilisticCircuit, SumUnit, \
     ProductUnit
 #from probabilistic_model.probabilistic_circuit.probabilistic_circuit import ProbabilisticCircuit, DeterministicSumUnit, \
     #SmoothSumUnit, DecomposableProductUnit

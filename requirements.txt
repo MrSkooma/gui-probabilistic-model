@@ -1,5 +1,4 @@
-random-events
-probabilistic-model
+# GUI dependencies
 igraph
 numpy
 plotly
@@ -10,4 +9,9 @@ watchdog
 scikit-learn
 pandas
 matplotlib
-pyjpt
+dash
+
+# Local CRAM workspace packages (installed in editable mode)
+-e ../cognitive_robot_abstract_machine/random_events
+-e ../cognitive_robot_abstract_machine/probabilistic_model
+-e ../cognitive_robot_abstract_machine/pycram
